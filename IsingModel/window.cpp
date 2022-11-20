@@ -13,9 +13,10 @@ extern bool goDraw;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-//#include <FL/x.H>
+#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
+#include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Toggle_Button.H>
@@ -42,6 +43,7 @@ extern void animationLoop();
 extern void keyboardFunction(unsigned char, int, int);
 extern void setAxisRange();
 extern void drawGraph();
+extern std::vector<bool> spinArray;
 extern std::vector<std::array<double, 4>> rotation_data;
 extern std::vector<double> Energy_data;
 extern std::ofstream Energy_stream;
@@ -135,8 +137,8 @@ class MyGlutWindow : public Fl_Glut_Window {
         glutAddMenuEntry(h_label, 'h');
         glutAttachMenu(GLUT_RIGHT_BUTTON);
 
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_TEXTURE_2D);  
+        //glEnable(GL_DEPTH_TEST);
+        //glEnable(GL_TEXTURE_2D);  
     }
 
     void FixViewport(int W, int H) 
@@ -356,6 +358,7 @@ void deactivateButtons()
 
 void start_callback(Fl_Widget* f) {
 
+    spinArray.clear();
     Energy_data.clear();
     last_index = 0;
 
@@ -442,10 +445,6 @@ int CreateMyWindow(int argc, char** argv) {
 
     //SETTING SUBWINDOWS AND SLIDERS___________________________________________________________________________
 
-    //subwindows
-    spinning_top_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
-    graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width+ x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width) , 0.5 * main_window->h());
-
 
     //sliders
     Nspins_slider = new SliderInput(x0, y0, slider_width, slider_height, "N for NxN grid", &values[0]);
@@ -484,7 +483,7 @@ int CreateMyWindow(int argc, char** argv) {
     MaxSteps_slider->bounds(100, 1'000'000);
     MaxSteps_slider->value(MaxSteps_def);
 
-    StepsPerSecond_slider->bounds(1, 1000);
+    StepsPerSecond_slider->bounds(1, 50000);
     StepsPerSecond_slider->value(stepspersec_def);
 
     FPS_slider->bounds(20, 360);
@@ -500,6 +499,11 @@ int CreateMyWindow(int argc, char** argv) {
     reset_button->callback(reset_callback);
     autorange_button->value(1);
     x_zoom_only->value(0);
+
+
+    //subwindows
+    spinning_top_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
+    graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width + x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width), 0.5 * main_window->h());
 
     main_window->end();
     

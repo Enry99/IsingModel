@@ -10,9 +10,10 @@ bool goDraw = true;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-//#include <FL/x.H>
+#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
+#include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Value_Slider.H>
@@ -34,6 +35,8 @@ bool goDraw = true;
 #include <exception>
 #include <stdexcept>
 
+#include <random>
+
 //extern functions/variables (defined in window.cpp)
 extern int CreateMyWindow(int argc, char** argv);
 extern void activateButtons();
@@ -43,7 +46,7 @@ extern Fl_Check_Button* persistent_trail;
 extern double FPS_display_width, FPS_display_height;
 
 //variables declarations
-int Nspins; //NxN grid
+long long int Nspins; //NxN grid
 unsigned long long int step_i, Nsteps;
 double steps_per_second;
 double accumulator = 0;
@@ -81,7 +84,10 @@ void startAlgorithm();
 void animationLoop();
 
 
-
+std::vector<bool> spinArray;
+std::mt19937 generator;
+std::bernoulli_distribution bernoulli_dist;
+std::uniform_int_distribution<int>* uniformdist; 
 
 void keyboardFunction(unsigned char key, int, int)
 {
@@ -128,7 +134,7 @@ void displaySpinningTop()
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(0, values[0], 0, values[0]);
+    gluOrtho2D(0, int(values[0]), 0, int(values[0]));
     glMatrixMode(GL_MODELVIEW);
 
     //std::cout << step_i << '\n';
@@ -137,22 +143,28 @@ void displaySpinningTop()
     glLoadIdentity();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    int side = 1;
+    constexpr int side = 1;
 
-    for (int i = 0; i < values[0]; ++i)
-    {
-        for (int j = 0; j < values[0]; ++j)
-        {
-            glColor3f(abs(sin(i * color + j)), 0, 0);
-            glBegin(GL_POLYGON);
+    Nspins = values[0];
+    glBegin(GL_QUADS);
+    for (size_t  i = 0; i < Nspins; ++i)
+        for (size_t j = 0; j < Nspins; ++j)
+        {       
+            
+            if (spinArray.size())
+            {
+                bool value = spinArray[Nspins * i + j];
+                glColor3f(value, 0, 0);
+            }
+            else glColor3f(abs(sin(i * color + j)), 0, 0);           
             glVertex2f(i, j);
             glVertex2f(i + side, j);
             glVertex2f(i + side, j + side);
             glVertex2f(i, j + side);
-            glEnd();
+        
         }
-    }
-       
+    glEnd();
+    
     
     ++frames_counter;
     if((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - FPS_previous_time)).count()*1.e-6 >=1) //updated every second
@@ -170,6 +182,48 @@ void setInitialConditions()
 {    
     Nspins = values[0];
     Nsteps = values[1];
+
+    spinArray.reserve(Nspins * Nspins);
+
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    generator.seed(seed);
+    uniformdist = new std::uniform_int_distribution<int>(0, Nspins * Nspins);
+    
+    //std::uniform_real_distribution<bool> dis(0.0, 1.0);
+
+    for (int i = 0; i < Nspins * Nspins; ++i)
+    {   
+        //spinArray.push_back(bernoulli_dist(generator));
+        spinArray.resize(Nspins * Nspins);
+    }
+    
+
+    /*
+    GLfloat* verts  = new GLfloat[2 * 4 * Nspins * Nspins];
+
+    constexpr int side = 1;
+
+    for (int i = 0; i < Nspins; ++i)
+        for (int j = 0; j < Nspins; ++j)
+        {
+            verts[Nspins * i + j] = i;
+            verts[Nspins * i + j + 1] = j;
+
+            verts[Nspins * i + j + 2] = i + side;
+            verts[Nspins * i + j + 3] = j;
+
+            verts[Nspins * i + j + 4] = i+side;
+            verts[Nspins * i + j + 5] = j+side;
+
+            verts[Nspins * i + j + 6] = i;
+            verts[Nspins * i + j + 7] = j+side;
+            
+            //glColor3f(abs(sin(i * color + j)), 0, 0);
+        }
+
+    GLuint myBufferID;
+    //glGenBuffers(1, &myBufferID);
+    */
 
     if(enable_file_output->value())
     {
@@ -218,6 +272,10 @@ void evolve()
 
         while (accumulator >= 1/steps_per_second && step_i < Nsteps)
         {
+            
+            size_t i = (*uniformdist)(generator);
+            spinArray[i] = !spinArray[i];
+            
             double E = sin( 0.1 *step_i);
 
             Energy_data.push_back(E);

@@ -298,7 +298,6 @@ void drawGraph() {
         glVertex2f(0, ymin_graph);
         glVertex2f(0, ymax_graph);
         glEnd();
-        time_single_plot(Energy_data);
     }
 
     glFlush();
