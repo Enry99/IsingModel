@@ -10,7 +10,7 @@ bool goDraw = true;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-#include <FL/x.H>
+//#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Box.H>
@@ -43,9 +43,11 @@ extern Fl_Check_Button* persistent_trail;
 extern double FPS_display_width, FPS_display_height;
 
 //variables declarations
+int Nspins; //NxN grid
+unsigned long long int step_i, Nsteps;
+double steps_per_second;
 double accumulator = 0;
-double steps_per_second = 5;
-double values[3]{}; //values tied to sliders
+double values[4]{}; //values tied to sliders
 bool run_animation = false; //run starts the animation when the first frame is ready
 bool pause_animation = false; //pause is controlled by button
 bool
@@ -67,9 +69,7 @@ std::vector<std::array<double, 4>> rotation_data;
 std::vector<double> Energy_data;
 std::ofstream Energy_stream;
 
-unsigned long long int step_i, Nsteps;
-
-
+double color = 0;
 
 //functions declarations
 void keyboardFunction(unsigned char, int, int);
@@ -126,18 +126,33 @@ void displaySpinningTop()
 {
     if (!frames_counter) FPS_previous_time = std::chrono::steady_clock::now();
 
-    
-    double x0 = 0, y0 = 0, side = 0.5;
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, values[0], 0, values[0]);
+    glMatrixMode(GL_MODELVIEW);
 
-    glColor3f(abs(sin(step_i/10)), 0, 0);
-    glBegin(GL_POLYGON);
+    //std::cout << step_i << '\n';
 
-        glVertex2f(x0, y0);
-        glVertex2f(x0 + side, y0);
-        glVertex2f(x0 + side, y0 + side);
-        glVertex2f(x0, y0 + side);
-    glEnd();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    int side = 1;
+
+    for (int i = 0; i < values[0]; ++i)
+    {
+        for (int j = 0; j < values[0]; ++j)
+        {
+            glColor3f(abs(sin(i * color + j)), 0, 0);
+            glBegin(GL_POLYGON);
+            glVertex2f(i, j);
+            glVertex2f(i + side, j);
+            glVertex2f(i + side, j + side);
+            glVertex2f(i, j + side);
+            glEnd();
+        }
+    }
+       
     
     ++frames_counter;
     if((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - FPS_previous_time)).count()*1.e-6 >=1) //updated every second
@@ -152,17 +167,20 @@ void displaySpinningTop()
 }
 
 void setInitialConditions()
-{
+{    
+    Nspins = values[0];
+    Nsteps = values[1];
 
     if(enable_file_output->value())
     {
         std::ofstream initial_values_stream("initial_values.txt");
-        const char* slider_names[3] = {
+        const char* slider_names[4] = {
+            "N of NxN grid = ",
             "mass = ",
             "tf = ",
             "FPS max"
         };
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 4; ++i)
         {
             initial_values_stream << slider_names[i] << values[i] << '\n';
         }
@@ -177,8 +195,7 @@ void setInitialConditions()
 
 void evolve()
 {
-    double L[3]; 
-    if (step_i <= Nsteps && run_animation)
+    if (step_i < Nsteps && run_animation)
     {
         //RUNGE-KUTTA LOOP
         auto new_time = std::chrono::steady_clock::now();
@@ -196,11 +213,12 @@ void evolve()
         //in pratica ogni volta viene mandato fuori un fotogramma,
         //poi si guarda quanto tempo e' passato, si evolve fino al nuovo tempo e si manda fuori il nuovo fotogramma
 
+        
 
 
-        while (accumulator >= 1/steps_per_second && step_i <=Nsteps)
+        while (accumulator >= 1/steps_per_second && step_i < Nsteps)
         {
-            double E = 0;
+            double E = sin( 0.1 *step_i);
 
             Energy_data.push_back(E);
 
@@ -210,8 +228,10 @@ void evolve()
             }
 
             accumulator -= 1 / steps_per_second;
-            step_i += 1;
+            ++step_i;
         }
+
+        color = step_i;
 
         rotation_data.push_back({ 0, 0, 0, 0 });
     }
@@ -243,24 +263,26 @@ void animationLoop()
 {
 #ifdef SLEEP
     
-    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000 / values[14]) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
+    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000 / values[3]) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
     idle_prev_time = std::chrono::steady_clock::now();
 
+    steps_per_second = values[2];
+    
     if (run_animation) evolve();
     else
     {
         //insert code to visualize initial configuration !
+        color = 1;
     }
 
 #else
-    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / values[14])
+    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / values[3])
     {
         idle_prev_time = std::chrono::steady_clock::now();
         
         if (!run_animation)
         {
-            xRotated = 180. / M_PI * (values[3]);
-            a1 = 1, a2 = 0, a3 = 0;
+
         }
         else evolve();
         goDraw = true;

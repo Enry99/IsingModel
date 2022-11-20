@@ -1,7 +1,7 @@
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-#include <FL/x.H>
+//#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Toggle_Button.H>
@@ -17,7 +17,7 @@ extern Fl_Choice* menu;
 extern Fl_Check_Button* autorange_button;
 extern AxisRangeInput* axis_boxes;
 extern std::vector<double> Energy_data;
-extern double delta_t;
+extern unsigned long long int step_i;
 
 double xmin_graph = -1;
 double xmax_graph = 1;
@@ -113,7 +113,7 @@ void time_single_plot(std::vector<T>& y_data, int y_index)
     {
         if (last_index == 0)
         {
-            data_xMax = 0+delta_t;
+            data_xMax = 1;
             data_xMin = 0;
             data_yMax = y_data[0][y_index];
             data_yMin = y_data[0][y_index];
@@ -124,7 +124,7 @@ void time_single_plot(std::vector<T>& y_data, int y_index)
             data_yMin = (std::min)(data_yMin, y_data[last_index][y_index]);
         }
 
-        xmax_graph = delta_t*y_data.size()+1;
+        xmax_graph = y_data.size() +1;
         xmin_graph = 0 - 0.25;
         ymax_graph = data_yMax + abs(data_yMax) * 0.1;
         ymin_graph = data_yMin - abs(data_yMin) * 0.1;
@@ -150,9 +150,9 @@ void time_single_plot(std::vector<T>& y_data, int y_index)
         glBegin(GL_POINTS);
         glColor3f(0, 1, 0);
 
-        for (int i = 0; i < rcm_data.size(); ++i)
+        for (int i = 0; i < y_data.size(); ++i)
         {
-            glVertex2f(i*delta_t, y_data[i][y_index]);
+            glVertex2f(i, y_data[i][y_index]);
         }
         glEnd();
 
@@ -166,7 +166,7 @@ void time_single_plot(std::vector<T>& y_data)
     {
         if (last_index == 0)
         {
-            data_xMax = 0 + delta_t;
+            data_xMax = 1;
             data_xMin = 0;
             data_yMax = y_data[0];
             data_yMin = y_data[0];
@@ -177,7 +177,7 @@ void time_single_plot(std::vector<T>& y_data)
             data_yMin = (std::min)(data_yMin, y_data[last_index]);
         }
 
-        xmax_graph = delta_t * y_data.size() + 1;
+        xmax_graph = y_data.size() + 1;
         xmin_graph = 0 - 0.25;
         ymax_graph = data_yMax + abs(data_yMax) * 0.1;
         ymin_graph = data_yMin - abs(data_yMin) * 0.1;
@@ -203,9 +203,9 @@ void time_single_plot(std::vector<T>& y_data)
         glBegin(GL_POINTS);
         glColor3f(0, 1, 0);
 
-        for (int i = 0; i < rcm_data.size(); ++i)
+        for (int i = 0; i < y_data.size(); ++i)
         {
-            glVertex2f(i * delta_t, y_data[i]);
+            glVertex2f(i, y_data[i]);
         }
         glEnd();
 
@@ -219,7 +219,7 @@ void time_double_plot(std::vector<T>& y1_data, int y1_index, std::vector<T>& y2_
     {
         if (last_index == 0)
         {
-            data_xMax = 0 + delta_t;
+            data_xMax = 1;
             data_xMin = 0;
             data_yMax = (std::max)(y1_data[0][y1_index], y2_data[0][y2_index]);
             data_yMin = (std::min)(y1_data[0][y1_index], y2_data[0][y2_index]);
@@ -230,7 +230,7 @@ void time_double_plot(std::vector<T>& y1_data, int y1_index, std::vector<T>& y2_
             data_yMin = (std::min)(data_yMin, (std::min)(y1_data[last_index][y1_index], y2_data[last_index][y2_index]));
         }
 
-        xmax_graph = delta_t * y1_data.size() + 1;
+        xmax_graph = y1_data.size() + 1;
         xmin_graph = 0 - 0.25;
         ymax_graph = data_yMax + abs(data_yMax) * 0.1;
         ymin_graph = data_yMin - abs(data_yMin) * 0.1;
@@ -257,7 +257,7 @@ void time_double_plot(std::vector<T>& y1_data, int y1_index, std::vector<T>& y2_
         glColor3f(0, 1, 0);
         for (int i = 0; i < y1_data.size(); ++i)
         {
-            glVertex2f(i * delta_t, y1_data[i][y1_index]);
+            glVertex2f(i, y1_data[i][y1_index]);
         }
         glEnd();
 
@@ -265,7 +265,7 @@ void time_double_plot(std::vector<T>& y1_data, int y1_index, std::vector<T>& y2_
         glColor3f(1, 0.55, 0);
         for (int i = 0; i < y1_data.size(); ++i)
         {
-            glVertex2f(i * delta_t, y2_data[i][y2_index]);
+            glVertex2f(i, y2_data[i][y2_index]);
         }
         glEnd();
 
@@ -298,6 +298,7 @@ void drawGraph() {
         glVertex2f(0, ymin_graph);
         glVertex2f(0, ymax_graph);
         glEnd();
+        time_single_plot(Energy_data);
     }
 
     glFlush();

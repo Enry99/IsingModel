@@ -13,7 +13,7 @@ extern bool goDraw;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-#include <FL/x.H>
+//#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Box.H>
@@ -42,10 +42,10 @@ extern void animationLoop();
 extern void keyboardFunction(unsigned char, int, int);
 extern void setAxisRange();
 extern void drawGraph();
-extern std::vector<double> rotation_data;
+extern std::vector<std::array<double, 4>> rotation_data;
 extern std::vector<double> Energy_data;
 extern std::ofstream Energy_stream;
-extern double values[3];
+extern double values[4];
 extern bool run_animation;
 extern bool pause_animation;
 extern double xmin_graph;
@@ -54,7 +54,7 @@ extern double ymin_graph;
 extern double ymax_graph;
 extern int last_index;
 extern int graphID;
-extern const char* menu_labels[17];
+extern const char* menu_labels[1];
 extern bool autorange;
 
 
@@ -87,10 +87,11 @@ bool mousePressed = false;
 double FPS_display_width, FPS_display_height;
 
 //sliders default values
-constexpr int FPS_default = 60;
-constexpr double
-mass_def = 0.1,
-total_time_def = 60.,
+constexpr int FPS_default = 72;
+constexpr int
+Nspins_def = 4,
+MaxSteps_def = 1000,
+stepspersec_def = 10;
 constexpr bool enable_gravity_def = true;
 constexpr bool enable_file_output_def = false;
 
@@ -107,24 +108,15 @@ MyGlutWindow2* graph_window;
 Fl_Button * start_button, * stop_button, * pause_button, * reset_button;
 Fl_Text_Display * vector_legend_box;
 SliderInput 
-* mass_slider,
-* initial_angular_velocity[3], 
-* additional_force[3],
-* time_increment, 
-* total_time, 
-* initial_angle, 
-* low_height, 
-* high_height, 
-* cone_radius, 
-* cylinder_height, 
+* Nspins_slider,
+* MaxSteps_slider,
+* StepsPerSecond_slider,
 * FPS_slider;
 Fl_Check_Button * enable_gravity;
 Fl_Check_Button* enable_file_output;
 Fl_Check_Button* persistent_trail;
 Fl_Check_Button* autorange_button;
 Fl_Check_Button* x_zoom_only;
-Fl_Text_Buffer * tbuff;
-Fl_Text_Buffer * sbuff;
 Fl_Choice* menu;
 AxisRangeInput* axis_boxes;
 
@@ -350,13 +342,15 @@ void createMenu(int key) {
 
 void activateButtons()
 {
-    mass_slider->activate();
+    MaxSteps_slider->activate();
+    Nspins_slider->activate();
 }
 
 
 void deactivateButtons()
 {
-    mass_slider->deactivate();
+    MaxSteps_slider->deactivate();
+    Nspins_slider->deactivate();
 }
 
 
@@ -397,9 +391,9 @@ void stop_callback(Fl_Widget* f) {
 
 void reset_callback(Fl_Widget* f)
 {
-   
-    mass_slider->value(mass_def),
-    total_time->value(total_time_def),
+    Nspins_slider->value(Nspins_def),
+    MaxSteps_slider->value(MaxSteps_def),
+    StepsPerSecond_slider->value(stepspersec_def),
     FPS_slider->value(FPS_default),
     enable_gravity->value(enable_gravity_def);
 }
@@ -428,14 +422,16 @@ int CreateMyWindow(int argc, char** argv) {
     
     //SETTING CONTAINER WINDOW_________________________________________________________________________________   
     int w_ext = 0.9 * Fl::w(); //container window sizes
-    int h_ext = 0.85 * Fl::h(); 
-    double x0 = w_ext * 0.82; //x position of sliders (pixel count from main window's left edge)
-    double y0 = 0.04 * h_ext;
-    double delta_h = h_ext * 0.054; //height step between sliders' upper-left corner 
+    int h_ext = 0.9 * Fl::h(); 
+    double x0 = w_ext * 0.80; //x position of sliders (pixel count from main window's left edge)
+    double y0 = h_ext * 0.04;
+    double delta_h = h_ext * 0.055; //height step between sliders' upper-left corner 
     double slider_width = w_ext * 0.16; 
     double slider_height = h_ext * 0.027; // 0.042;
-    double button_width = 0.9 * slider_width;
-    double button_height = 2.5*h_ext*0.042;
+    double button_width = w_ext * 0.15;
+    double button_height = h_ext * 0.1;
+    double xbuttons = 0.6 * w_ext;
+    double y_buttons = 0.85 * h_ext;
 
     main_window = new Fl_Window((Fl::w()- w_ext)/2, (Fl::h()-h_ext)/2, w_ext, h_ext, "Lagrange spinning top");
     main_window->resizable(main_window);
@@ -447,24 +443,25 @@ int CreateMyWindow(int argc, char** argv) {
     //SETTING SUBWINDOWS AND SLIDERS___________________________________________________________________________
 
     //subwindows
-    spinning_top_window = new MyGlutWindow(0.025 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);
+    spinning_top_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
     graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width+ x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width) , 0.5 * main_window->h());
 
 
     //sliders
-    mass_slider = new SliderInput(x0, y0, slider_width, slider_height, "mass (kg)", &values[0]);
-    total_time = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "total time (s)", &values[1]);
-    FPS_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "FPS max", &values[2]);
+    Nspins_slider = new SliderInput(x0, y0, slider_width, slider_height, "N for NxN grid", &values[0]);
+    MaxSteps_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "Nsteps", &values[1]);
+    StepsPerSecond_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "StepsPerSecond", &values[2]);
+    FPS_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "FPS max", &values[3]);
 
 
     //buttons
-    start_button = new Fl_Button(x0, y0 += 1.1*delta_h, button_width, button_height, "@#>\tStart");
+    start_button = new Fl_Button(x0, y_buttons, button_width, button_height, "@#>\tStart");
     start_button->color(FL_GREEN);
-    pause_button = new Fl_Toggle_Button(x0 - 0.94 * slider_width, y0, button_width, button_height, "@#||\tPause/Unpause");
+    pause_button = new Fl_Toggle_Button(x0 - 0.94 * slider_width, y_buttons, button_width, button_height, "@#||\tPause/Unpause");
     pause_button->color(FL_YELLOW);
-    stop_button = new Fl_Button(x0 - 1.88 * slider_width, y0, button_width, button_height, "@#square\tStop");
+    stop_button = new Fl_Button(x0 - 1.88 * slider_width, y_buttons, button_width, button_height, "@#square\tStop");
     stop_button->color(FL_RED);
-    reset_button = new Fl_Button(x0 - 1.88 * slider_width, y0 - 0.75* button_height, button_width, 0.6*button_height, "Reset sliders");
+    reset_button = new Fl_Button(x0 - 1.88 * slider_width, y_buttons - 0.75* button_height, button_width, 0.6*button_height, "Reset sliders");
     reset_button->color(FL_CYAN);
     enable_gravity = new Fl_Check_Button(x0 - 0.7*slider_width, 0.78 * h_ext, 0.4*slider_width, slider_height, "Enable gravity");
     enable_file_output = new Fl_Check_Button(x0 - 0.7*slider_width, 0.65 * h_ext, 0.5*slider_width, slider_height, "Output data on file");
@@ -481,11 +478,14 @@ int CreateMyWindow(int argc, char** argv) {
     autorange_button->callback(autorangeButtonCallback);
 
     //setting default values and bounds
-    mass_slider->bounds(0.001, 5.);
-    mass_slider->value(mass_def);
+    Nspins_slider->bounds(4, 1000);
+    Nspins_slider->value(Nspins_def);
 
-    total_time->bounds(1., 600.);
-    total_time->value(total_time_def);
+    MaxSteps_slider->bounds(100, 1'000'000);
+    MaxSteps_slider->value(MaxSteps_def);
+
+    StepsPerSecond_slider->bounds(1, 1000);
+    StepsPerSecond_slider->value(stepspersec_def);
 
     FPS_slider->bounds(20, 360);
     FPS_slider->step(1);
