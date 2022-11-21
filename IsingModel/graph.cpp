@@ -1,7 +1,7 @@
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-//#include <FL/x.H>
+#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Toggle_Button.H>
@@ -33,11 +33,13 @@ int graphID = -1;
 
 const char* menu_labels[]
 {
+    "None",
     "Energy (t)"
 };
 
 enum menuItems
 {
+    NONE,
     ENERGY_T
 };
 

@@ -50,19 +50,12 @@ long long int Nspins; //NxN grid
 unsigned long long int step_i, Nsteps;
 double steps_per_second;
 double accumulator = 0;
-double values[4]{}; //values tied to sliders
+int values[4]{}; //values tied to sliders
 bool run_animation = false; //run starts the animation when the first frame is ready
 bool pause_animation = false; //pause is controlled by button
 bool
-DRAW_SUN = true,
-DRAW_FLOOR = true,
-SHOW_FPS = true,
-DRAW_TRAIL = true,
-DRAW_AXIS = true,
-DRAW_TOP = true,
-DRAW_VECTORS = false,
-hide_vectors, //hides vectors when animation is stopped
-rainbow = false;
+SHOW_FPS = true;
+int SPIN_INITIALIZATION = 0;
 std::chrono::steady_clock::time_point 
 idle_prev_time = std::chrono::steady_clock::now(),
 previous_time, 
@@ -73,6 +66,12 @@ std::vector<double> Energy_data;
 std::ofstream Energy_stream;
 
 double color = 0;
+enum initializations
+{
+    RANDOM_INIT,
+    UNIFORM_UP_INIT,
+    UNIFORM_DOWN_INIT
+};
 
 //functions declarations
 void keyboardFunction(unsigned char, int, int);
@@ -89,12 +88,45 @@ std::mt19937 generator;
 std::bernoulli_distribution bernoulli_dist;
 std::uniform_int_distribution<int>* uniformdist; 
 
+void initialize_spins()
+{
+    Nspins = values[0];
+    Nsteps = values[1];
+    spinArray.resize(Nspins * Nspins);
+    switch (SPIN_INITIALIZATION)
+    {
+    case RANDOM_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = bernoulli_dist(generator);
+        break;
+    }
+    case UNIFORM_UP_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = true;
+        break;
+    }
+    case UNIFORM_DOWN_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = false;
+        break;
+    }
+    default:
+        break;
+    }
+
+}
+
+
+
+
 void keyboardFunction(unsigned char key, int, int)
 {
 
     switch (key)
     {
-    case 'h': DRAW_TOP = !DRAW_TOP;  break;
+    case 'r': SPIN_INITIALIZATION = RANDOM_INIT; break;
+    case 'u': SPIN_INITIALIZATION = UNIFORM_UP_INIT; break;
+    case 'd': SPIN_INITIALIZATION = UNIFORM_DOWN_INIT; break;
     case 27: exit(0);   break;// exit program when [ESC] key presseed
     default:   break;
     }
@@ -127,17 +159,16 @@ void drawFPS(std::string text)
     glEnable(GL_DEPTH_TEST);
 }
 
-
 void displaySpinningTop()
 {
     if (!frames_counter) FPS_previous_time = std::chrono::steady_clock::now();
 
+    if (spinArray.empty()) return;
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(0, int(values[0]), 0, int(values[0]));
+    gluOrtho2D(0, Nspins, 0, Nspins);
     glMatrixMode(GL_MODELVIEW);
-
-    //std::cout << step_i << '\n';
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -145,18 +176,16 @@ void displaySpinningTop()
 
     constexpr int side = 1;
 
-    Nspins = values[0];
+    
     glBegin(GL_QUADS);
     for (size_t  i = 0; i < Nspins; ++i)
         for (size_t j = 0; j < Nspins; ++j)
         {       
-            
-            if (spinArray.size())
-            {
-                bool value = spinArray[Nspins * i + j];
-                glColor3f(value, 0, 0);
-            }
-            else glColor3f(abs(sin(i * color + j)), 0, 0);           
+
+
+            bool value = spinArray[Nspins * i + j];
+            glColor3f(value, 0, 0);
+         
             glVertex2f(i, j);
             glVertex2f(i + side, j);
             glVertex2f(i + side, j + side);
@@ -180,50 +209,11 @@ void displaySpinningTop()
 
 void setInitialConditions()
 {    
-    Nspins = values[0];
-    Nsteps = values[1];
 
-    spinArray.reserve(Nspins * Nspins);
-
+    initialize_spins();
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     generator.seed(seed);
     uniformdist = new std::uniform_int_distribution<int>(0, Nspins * Nspins);
-    
-    //std::uniform_real_distribution<bool> dis(0.0, 1.0);
-
-    for (int i = 0; i < Nspins * Nspins; ++i)
-    {   
-        //spinArray.push_back(bernoulli_dist(generator));
-        spinArray.resize(Nspins * Nspins);
-    }
-    
-
-    /*
-    GLfloat* verts  = new GLfloat[2 * 4 * Nspins * Nspins];
-
-    constexpr int side = 1;
-
-    for (int i = 0; i < Nspins; ++i)
-        for (int j = 0; j < Nspins; ++j)
-        {
-            verts[Nspins * i + j] = i;
-            verts[Nspins * i + j + 1] = j;
-
-            verts[Nspins * i + j + 2] = i + side;
-            verts[Nspins * i + j + 3] = j;
-
-            verts[Nspins * i + j + 4] = i+side;
-            verts[Nspins * i + j + 5] = j+side;
-
-            verts[Nspins * i + j + 6] = i;
-            verts[Nspins * i + j + 7] = j+side;
-            
-            //glColor3f(abs(sin(i * color + j)), 0, 0);
-        }
-
-    GLuint myBufferID;
-    //glGenBuffers(1, &myBufferID);
-    */
 
     if(enable_file_output->value())
     {
@@ -249,7 +239,7 @@ void setInitialConditions()
 
 void evolve()
 {
-    if (step_i < Nsteps && run_animation)
+    if (step_i < Nsteps)
     {
         //RUNGE-KUTTA LOOP
         auto new_time = std::chrono::steady_clock::now();
@@ -289,7 +279,7 @@ void evolve()
             ++step_i;
         }
 
-        color = step_i;
+        //color = step_i;
 
         rotation_data.push_back({ 0, 0, 0, 0 });
     }
@@ -304,7 +294,7 @@ void evolve()
             Energy_stream.close();
         }
 
-        run_animation = false; hide_vectors = true;
+        run_animation = false;
         activateButtons();
     }
 
@@ -319,9 +309,12 @@ void startAlgorithm()
 
 void animationLoop()
 {
+
+    static int previousSpins = -1;
+    static int previousInit = -1;
 #ifdef SLEEP
     
-    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000 / values[3]) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
+    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000. / values[3]) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
     idle_prev_time = std::chrono::steady_clock::now();
 
     steps_per_second = values[2];
@@ -329,8 +322,12 @@ void animationLoop()
     if (run_animation) evolve();
     else
     {
-        //insert code to visualize initial configuration !
-        color = 1;
+        if (previousSpins != values[0] || previousInit != SPIN_INITIALIZATION)
+        {
+            initialize_spins();
+            previousSpins = values[0];
+            previousInit = SPIN_INITIALIZATION;
+        }
     }
 
 #else

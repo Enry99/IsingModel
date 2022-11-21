@@ -9,6 +9,7 @@ extern bool goDraw;
 
 
 #include "slider_input.h"
+#include "slider_input_int.h"
 #include "AxisRangeInput.h"
 #include <FL/gl.h>
 #include <FL/glu.h>
@@ -47,7 +48,7 @@ extern std::vector<bool> spinArray;
 extern std::vector<std::array<double, 4>> rotation_data;
 extern std::vector<double> Energy_data;
 extern std::ofstream Energy_stream;
-extern double values[4];
+extern int values[4];
 extern bool run_animation;
 extern bool pause_animation;
 extern double xmin_graph;
@@ -56,7 +57,7 @@ extern double ymin_graph;
 extern double ymax_graph;
 extern int last_index;
 extern int graphID;
-extern const char* menu_labels[1];
+extern const char* menu_labels[2];
 extern bool autorange;
 
 
@@ -91,14 +92,16 @@ double FPS_display_width, FPS_display_height;
 //sliders default values
 constexpr int FPS_default = 72;
 constexpr int
-Nspins_def = 4,
-MaxSteps_def = 1000,
-stepspersec_def = 10;
+Nspins_def = 100,
+MaxSteps_def = 100000,
+stepspersec_def = 10000;
 constexpr bool enable_gravity_def = true;
 constexpr bool enable_file_output_def = false;
 
 //right-click menu labels
-char h_label[] = "Hide spinning top [h]";
+char r_label[] = "RandomDist [r]";
+char u_label[] = "AllUp [u]";
+char d_label[] = "AllDown [d]";
 
 
 //interface elements
@@ -109,7 +112,7 @@ MyGlutWindow* spinning_top_window;
 MyGlutWindow2* graph_window;
 Fl_Button * start_button, * stop_button, * pause_button, * reset_button;
 Fl_Text_Display * vector_legend_box;
-SliderInput 
+SliderInput_Int
 * Nspins_slider,
 * MaxSteps_slider,
 * StepsPerSecond_slider,
@@ -134,7 +137,9 @@ class MyGlutWindow : public Fl_Glut_Window {
 
         //right-click menu on main viewport
         glutCreateMenu(createMenu);
-        glutAddMenuEntry(h_label, 'h');
+        glutAddMenuEntry(r_label, 'r');
+        glutAddMenuEntry(u_label, 'u');
+        glutAddMenuEntry(d_label, 'd');
         glutAttachMenu(GLUT_RIGHT_BUTTON);
 
         //glEnable(GL_DEPTH_TEST);
@@ -447,10 +452,10 @@ int CreateMyWindow(int argc, char** argv) {
 
 
     //sliders
-    Nspins_slider = new SliderInput(x0, y0, slider_width, slider_height, "N for NxN grid", &values[0]);
-    MaxSteps_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "Nsteps", &values[1]);
-    StepsPerSecond_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "StepsPerSecond", &values[2]);
-    FPS_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "FPS max", &values[3]);
+    Nspins_slider = new SliderInput_Int(x0, y0, slider_width, slider_height, "N for NxN grid", &values[0]);
+    MaxSteps_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "Nsteps", &values[1]);
+    StepsPerSecond_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "StepsPerSecond", &values[2]);
+    FPS_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "FPS max", &values[3]);
 
 
     //buttons
@@ -487,7 +492,6 @@ int CreateMyWindow(int argc, char** argv) {
     StepsPerSecond_slider->value(stepspersec_def);
 
     FPS_slider->bounds(20, 360);
-    FPS_slider->step(1);
     FPS_slider->value(FPS_default);
 
     enable_gravity->value(enable_gravity_def);

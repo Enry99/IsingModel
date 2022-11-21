@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="AxisRangeInput.h" />
     <ClInclude Include="slider_input.h" />
+    <ClInclude Include="slider_input_int.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

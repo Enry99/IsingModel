@@ -10,6 +10,7 @@
 // 1.00 erco 10/17/04
 //modified by us in 2020, added option to handle an external variable, updating its value with slider's value.
 
+
 class SliderInput : public Fl_Group {
     Fl_Float_Input *input;
     Fl_Slider    *slider;
