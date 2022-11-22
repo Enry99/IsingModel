@@ -31,13 +31,13 @@ double data_yMin;
 int last_index = 0;
 int graphID = -1;
 
-const char* menu_labels[]
+const char* graph_menu_labels[]
 {
     "None",
     "Energy (t)"
 };
 
-enum menuItems
+enum graphMenuItems
 {
     NONE,
     ENERGY_T

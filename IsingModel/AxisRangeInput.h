@@ -10,7 +10,7 @@
 
 class myFl_Float_Input : public Fl_Float_Input
 {
-    double** handled_vals;
+    double** handled_vals;  //ogni input deve poterli gestire tutti per evitare di poter inserire per es. xmin > xmax
     int index;
 public:
     

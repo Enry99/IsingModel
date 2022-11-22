@@ -32,9 +32,6 @@ bool goDraw = true;
 #include <time.h>
 #include <cstdarg>
 
-#include <exception>
-#include <stdexcept>
-
 #include <random>
 
 //extern functions/variables (defined in window.cpp)
@@ -44,10 +41,23 @@ extern Fl_Check_Button* enable_gravity;
 extern Fl_Check_Button* enable_file_output;
 extern Fl_Check_Button* persistent_trail;
 extern double FPS_display_width, FPS_display_height;
+constexpr int FPS_default = 72;
 
 //variables declarations
+
+//ISING MODEL VARIABLES
 long long int Nspins; //NxN grid
 unsigned long long int step_i, Nsteps;
+double J = 1;
+double H_field_ext = 0;
+double mu = 1;
+constexpr double kb = 1;
+double Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
+double T_div_Tc;
+//////////////////////////////////////////////////
+
+
+///
 double steps_per_second;
 double accumulator = 0;
 int values[4]{}; //values tied to sliders
@@ -76,17 +86,19 @@ enum initializations
 //functions declarations
 void keyboardFunction(unsigned char, int, int);
 void drawFPS(std::string);
-void displaySpinningTop();
+void drawSteps(std::string);
+void drawSpinningTop();
 void setInitialConditions();
 void evolve();
 void startAlgorithm();
 void animationLoop();
 
 
-std::vector<bool> spinArray;
-std::mt19937 generator;
+std::vector<int> spinArray;
+std::mt19937 generator, generator2;
 std::bernoulli_distribution bernoulli_dist;
-std::uniform_int_distribution<int>* uniformdist; 
+std::uniform_int_distribution<int>* uniformdist_site;
+std::uniform_real_distribution<double> uniformdist_accept(0,1);
 
 void initialize_spins()
 {
@@ -97,17 +109,17 @@ void initialize_spins()
     {
     case RANDOM_INIT:
     {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = bernoulli_dist(generator);
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = bernoulli_dist(generator) ? 1 : -1;
         break;
     }
     case UNIFORM_UP_INIT:
     {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = true;
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = 1;
         break;
     }
     case UNIFORM_DOWN_INIT:
     {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = false;
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = -1;
         break;
     }
     default:
@@ -115,9 +127,6 @@ void initialize_spins()
     }
 
 }
-
-
-
 
 void keyboardFunction(unsigned char key, int, int)
 {
@@ -133,7 +142,6 @@ void keyboardFunction(unsigned char key, int, int)
 
 }
 
-
 void drawFPS(std::string text)
 {
 
@@ -147,6 +155,14 @@ void drawFPS(std::string text)
     glPushMatrix();
     glLoadIdentity();
 
+    glBegin(GL_QUADS);
+        glColor3f(0, 0, 0);
+        glVertex2f(0, 0);
+        glVertex2f(0.07, 0);
+        glVertex2f(0.07, 0.04);
+        glVertex2f(0, 0.04);
+    glEnd();
+
     glColor3f(0, 1, 0);
     glRasterPos2f(0.007, 0.015);
     for (auto i : text) glutBitmapCharacter(GLUT_BITMAP_9_BY_15, i);
@@ -159,7 +175,32 @@ void drawFPS(std::string text)
     glEnable(GL_DEPTH_TEST);
 }
 
-void displaySpinningTop()
+void drawSteps(std::string text)
+{
+
+    glDisable(GL_DEPTH_TEST);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0.0, FPS_display_width, FPS_display_height, 0.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(0, 1, 0);
+    glRasterPos2f(0.007, 0.030);
+    for (auto i : text) glutBitmapCharacter(GLUT_BITMAP_9_BY_15, i);
+
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void drawSpinningTop()
 {
     if (!frames_counter) FPS_previous_time = std::chrono::steady_clock::now();
 
@@ -181,16 +222,15 @@ void displaySpinningTop()
     for (size_t  i = 0; i < Nspins; ++i)
         for (size_t j = 0; j < Nspins; ++j)
         {       
+            if (spinArray[Nspins * i + j] > 0)
+            {
+                glColor3f(1, 1, 1);
 
-
-            bool value = spinArray[Nspins * i + j];
-            glColor3f(value, 0, 0);
-         
-            glVertex2f(i, j);
-            glVertex2f(i + side, j);
-            glVertex2f(i + side, j + side);
-            glVertex2f(i, j + side);
-        
+                glVertex2f(i, j);
+                glVertex2f(i + side, j);
+                glVertex2f(i + side, j + side);
+                glVertex2f(i, j + side);
+            }   
         }
     glEnd();
     
@@ -202,6 +242,7 @@ void displaySpinningTop()
         frames_counter = 0;
     }
     if(SHOW_FPS) drawFPS( std::string("FPS: ") + std::to_string( FPS ) );
+    drawSteps(std::string("Step: ") + std::to_string(step_i/1'000'000) + std::string("M"));
 
     //glutSwapBuffers();
     glFlush();
@@ -209,11 +250,11 @@ void displaySpinningTop()
 
 void setInitialConditions()
 {    
-
     initialize_spins();
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    generator.seed(seed);
-    uniformdist = new std::uniform_int_distribution<int>(0, Nspins * Nspins);
+    Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
+    generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
+    generator2.seed(std::chrono::system_clock::now().time_since_epoch().count());
+    uniformdist_site = new std::uniform_int_distribution<int>(0, Nspins * Nspins - 1); //U( [a,b] <- (b included))
 
     if(enable_file_output->value())
     {
@@ -234,14 +275,13 @@ void setInitialConditions()
         Energy_stream.open("Energy.txt");
     }
 
-    rotation_data.reserve(Nsteps);
+    //rotation_data.reserve(Nsteps);
 }
 
 void evolve()
 {
     if (step_i < Nsteps)
     {
-        //RUNGE-KUTTA LOOP
         auto new_time = std::chrono::steady_clock::now();
         double frame_time = std::chrono::duration_cast<std::chrono::microseconds>(new_time - previous_time).count() * 1.e-6;
         previous_time = new_time;
@@ -263,29 +303,46 @@ void evolve()
         while (accumulator >= 1/steps_per_second && step_i < Nsteps)
         {
             
-            size_t i = (*uniformdist)(generator);
-            spinArray[i] = !spinArray[i];
+            //Metropolis-Hastings MCMC
+            size_t i = (*uniformdist_site)(generator); //select spin
+
+            //PBC --> not at boundary ? normal neighbours : pbc neighbours
+            size_t up = (i + Nspins) < Nspins * Nspins ? i+Nspins : i+Nspins - Nspins*Nspins;
+            size_t down = i > Nspins ? i - Nspins : i - Nspins + Nspins * Nspins;
+            size_t sx = i % Nspins ? i - 1 : i - 1 + Nspins;
+            size_t dx = (i + 1) % Nspins ? i + 1 : i + 1 - Nspins;
+
+            double deltaE = 2 * spinArray[i] * (J * (spinArray[sx] + spinArray[dx] + spinArray[up] + spinArray[down]) + mu * H_field_ext);
             
+
+            if(deltaE <= 0) spinArray[i] *= -1;
+            else if (uniformdist_accept(generator2) < std::exp(-deltaE / (kb * T_div_Tc * Tc))) spinArray[i] *= -1;
+            
+            /////////////////////////////////////////////////////////
+
+            /*
             double E = sin( 0.1 *step_i);
 
-            Energy_data.push_back(E);
+            //Energy_data.push_back(E);
 
             if (enable_file_output->value())
             {
                 Energy_stream << step_i << '\t' << E << '\n';
             }
-
+            */
             accumulator -= 1 / steps_per_second;
             ++step_i;
         }
 
         //color = step_i;
 
-        rotation_data.push_back({ 0, 0, 0, 0 });
+        //rotation_data.push_back({ 0, 0, 0, 0 });
     }
     else
     {
         std::cout << "\nSimulazione terminata.\n";
+
+        delete uniformdist_site;
 
         if (enable_file_output->value())
         {
@@ -314,7 +371,7 @@ void animationLoop()
     static int previousInit = -1;
 #ifdef SLEEP
     
-    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000. / values[3]) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
+    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000. / FPS_default) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
     idle_prev_time = std::chrono::steady_clock::now();
 
     steps_per_second = values[2];
@@ -331,7 +388,7 @@ void animationLoop()
     }
 
 #else
-    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / values[3])
+    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / FPS_default)
     {
         idle_prev_time = std::chrono::steady_clock::now();
         

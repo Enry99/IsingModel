@@ -39,12 +39,12 @@ extern bool goDraw;
 //extern functions/variables (declared in main.cpp)
 extern void setInitialConditions();
 extern void startAlgorithm();
-extern void displaySpinningTop();
+extern void drawSpinningTop();
 extern void animationLoop();
 extern void keyboardFunction(unsigned char, int, int);
 extern void setAxisRange();
 extern void drawGraph();
-extern std::vector<bool> spinArray;
+extern std::vector<int> spinArray;
 extern std::vector<std::array<double, 4>> rotation_data;
 extern std::vector<double> Energy_data;
 extern std::ofstream Energy_stream;
@@ -57,8 +57,10 @@ extern double ymin_graph;
 extern double ymax_graph;
 extern int last_index;
 extern int graphID;
-extern const char* menu_labels[2];
+extern const char* graph_menu_labels[2];
 extern bool autorange;
+extern double T_div_Tc;
+extern double H_field_ext;
 
 
 //Function declarations
@@ -67,7 +69,7 @@ void idleGraph(void*);
 void graphmouseFunction(int, int, int, int);
 void graphmouseWheelFunction(int);
 void graphmouseMotionCallback(int, int);
-void createMenu(int);
+void createRightClickMenu(int);
 void activateButtons();
 void deactivateButtons();
 void start_callback(Fl_Widget*);
@@ -90,11 +92,12 @@ bool mousePressed = false;
 double FPS_display_width, FPS_display_height;
 
 //sliders default values
-constexpr int FPS_default = 72;
 constexpr int
-Nspins_def = 100,
-MaxSteps_def = 100000,
-stepspersec_def = 10000;
+Nspins_def = 300,
+MaxSteps_def = 100'000'000,
+stepspersec_def = 1'000'000;
+constexpr double temp_def = 1.1,
+h_ext_def = 0;
 constexpr bool enable_gravity_def = true;
 constexpr bool enable_file_output_def = false;
 
@@ -115,14 +118,16 @@ Fl_Text_Display * vector_legend_box;
 SliderInput_Int
 * Nspins_slider,
 * MaxSteps_slider,
-* StepsPerSecond_slider,
-* FPS_slider;
+* StepsPerSecond_slider;
+SliderInput 
+* Temp_slider,
+* H_ext_slider;
 Fl_Check_Button * enable_gravity;
 Fl_Check_Button* enable_file_output;
 Fl_Check_Button* persistent_trail;
 Fl_Check_Button* autorange_button;
 Fl_Check_Button* x_zoom_only;
-Fl_Choice* menu;
+Fl_Choice* graphMenu;
 AxisRangeInput* axis_boxes;
 
 //end of declarations_____________________________
@@ -136,14 +141,12 @@ class MyGlutWindow : public Fl_Glut_Window {
         glClearColor(0.0, 0.0, 0.0, 0.0);
 
         //right-click menu on main viewport
-        glutCreateMenu(createMenu);
+        glutCreateMenu(createRightClickMenu);
         glutAddMenuEntry(r_label, 'r');
         glutAddMenuEntry(u_label, 'u');
         glutAddMenuEntry(d_label, 'd');
         glutAttachMenu(GLUT_RIGHT_BUTTON);
-
-        //glEnable(GL_DEPTH_TEST);
-        //glEnable(GL_TEXTURE_2D);  
+ 
     }
 
     void FixViewport(int W, int H) 
@@ -166,7 +169,7 @@ class MyGlutWindow : public Fl_Glut_Window {
         static bool first_time = true;
         if (first_time) { valid(1); init();  FixViewport(w(), h()); first_time = false; }
        
-        displaySpinningTop();
+        drawSpinningTop();
     }
 
     void resize(int X, int Y, int W, int H) 
@@ -183,8 +186,13 @@ public:
     // OPENGL WINDOW CONSTRUCTOR
     MyGlutWindow(int X, int Y, int W, int H, const char* L = 0, bool use_mouse_keyboard = false) : Fl_Glut_Window(X, Y, W, H, L)
     {
-        mode(FL_RGB | FL_DEPTH);
+        mode(FL_RGB);
         Fl::add_idle(idleSpinningTop, this);
+        if (use_mouse_keyboard) {
+            //this->mouse = mouseFunction;
+            //this->motion = mouseMotionCallback;
+            this->keyboard = keyboardFunction;
+        }
         end();
     }
 
@@ -197,7 +205,7 @@ class MyGlutWindow2 : public Fl_Glut_Window {
     void init()
     {
         glClearColor(0.0, 0.0, 0.0, 0.0);
-        glEnable(GL_DEPTH_TEST);
+        //glEnable(GL_DEPTH_TEST);
     }
 
     void FixViewport(int W, int H) {
@@ -235,7 +243,7 @@ public:
     MyGlutWindow2(int X, int Y, int W, int H, const char* L = 0) : Fl_Glut_Window(X, Y, W, H, L)
     {
         
-        mode(FL_RGB | FL_DEPTH);
+        mode(FL_RGB);
         Fl::add_idle(idleGraph, this);
         this->mouse = graphmouseFunction;
         this->motion = graphmouseMotionCallback;
@@ -247,9 +255,9 @@ public:
 
 void idleSpinningTop(void*)
 {
-    animationLoop(); //updates data (evolve)
+    animationLoop(); //if run_algorithm=true updates data (with evolve)
 #ifdef SLEEP  
-    spinning_top_window->redraw();  //draws using displaySpinningTop
+    spinning_top_window->redraw();  //draws using drawSpinningTop
 #else
     if (goDraw) {
         spinning_top_window->redraw();
@@ -342,7 +350,7 @@ void autorangeButtonCallback(Fl_Widget* f)
 }
 
 
-void createMenu(int key) { 
+void createRightClickMenu(int key) { 
     keyboardFunction((unsigned char)key, 0, 0); 
 }
 
@@ -351,6 +359,9 @@ void activateButtons()
 {
     MaxSteps_slider->activate();
     Nspins_slider->activate();
+    start_button->activate();
+    reset_button->activate();
+    enable_file_output->activate();
 }
 
 
@@ -358,6 +369,9 @@ void deactivateButtons()
 {
     MaxSteps_slider->deactivate();
     Nspins_slider->deactivate();
+    start_button->deactivate();
+    reset_button->deactivate();
+    enable_file_output->deactivate();
 }
 
 
@@ -402,7 +416,8 @@ void reset_callback(Fl_Widget* f)
     Nspins_slider->value(Nspins_def),
     MaxSteps_slider->value(MaxSteps_def),
     StepsPerSecond_slider->value(stepspersec_def),
-    FPS_slider->value(FPS_default),
+    Temp_slider->value(temp_def),
+    H_ext_slider->value(h_ext_def),
     enable_gravity->value(enable_gravity_def);
 }
 
@@ -412,7 +427,9 @@ void main_window_cb(Fl_Widget* widget, void*)
 #if defined SLEEP && (defined(_WIN32) || defined(WIN32)) && defined CHANGE_SYSTEM_TIMER_RESOLUTION
     timeEndPeriod(1);
 #endif
-
+    delete spinning_top_window;
+    delete graph_window;
+    delete main_window;
     return exit(EXIT_SUCCESS);
 }
 
@@ -441,7 +458,7 @@ int CreateMyWindow(int argc, char** argv) {
     double xbuttons = 0.6 * w_ext;
     double y_buttons = 0.85 * h_ext;
 
-    main_window = new Fl_Window((Fl::w()- w_ext)/2, (Fl::h()-h_ext)/2, w_ext, h_ext, "Lagrange spinning top");
+    main_window = new Fl_Window((Fl::w()- w_ext)/2, (Fl::h()-h_ext)/2, w_ext, h_ext, "Ising Model");
     main_window->resizable(main_window);
     main_window->callback(main_window_cb);
     main_window->show(argc, argv);
@@ -455,7 +472,8 @@ int CreateMyWindow(int argc, char** argv) {
     Nspins_slider = new SliderInput_Int(x0, y0, slider_width, slider_height, "N for NxN grid", &values[0]);
     MaxSteps_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "Nsteps", &values[1]);
     StepsPerSecond_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "StepsPerSecond", &values[2]);
-    FPS_slider = new SliderInput_Int(x0, y0 += delta_h, slider_width, slider_height, "FPS max", &values[3]);
+    Temp_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "T/Tc", &T_div_Tc);
+    H_ext_slider = new SliderInput(x0, y0 += delta_h, slider_width, slider_height, "H_ext", &H_field_ext);
 
 
     //buttons
@@ -471,28 +489,31 @@ int CreateMyWindow(int argc, char** argv) {
     enable_file_output = new Fl_Check_Button(x0 - 0.7*slider_width, 0.65 * h_ext, 0.5*slider_width, slider_height, "Output data on file");
     autorange_button = new Fl_Check_Button(x0 - 0.7 * slider_width, 0.028 * h_ext + 0.5 * main_window->h(), 0.5 * slider_width, slider_height, "Auto range");
     x_zoom_only = new Fl_Check_Button(x0 - 0.7 * slider_width, 0.028 * h_ext + 0.5 * main_window->h()+slider_height, 0.5 * slider_width, slider_height, "X axis only zoom");
-    menu = new Fl_Choice(x0 - 1.88 * slider_width, 0.028 * h_ext + 0.5 * main_window->h(), 0.9*slider_width, slider_height);
+    graphMenu = new Fl_Choice(x0 - 1.88 * slider_width, 0.028 * h_ext + 0.5 * main_window->h(), 0.9*slider_width, slider_height);
     axis_boxes = new AxisRangeInput(x0 - 1.88 * slider_width, 0.045 * h_ext + 0.5 * main_window->h() + slider_height, 1.1*slider_width, slider_height,
         &xmin_graph, &xmax_graph, &ymin_graph, &ymax_graph, "xmin, xmax, ymin, ymax");
     axis_boxes->deactivate();
     x_zoom_only->deactivate();
 
-    for (auto i : menu_labels) menu->add(i);
-    menu->callback(graphChoiceMenuCallback);
+    for (auto i : graph_menu_labels) graphMenu->add(i);
+    graphMenu->callback(graphChoiceMenuCallback);
     autorange_button->callback(autorangeButtonCallback);
 
     //setting default values and bounds
     Nspins_slider->bounds(4, 1000);
     Nspins_slider->value(Nspins_def);
 
-    MaxSteps_slider->bounds(100, 1'000'000);
+    MaxSteps_slider->bounds(100, 1'000'000'000);
     MaxSteps_slider->value(MaxSteps_def);
 
-    StepsPerSecond_slider->bounds(1, 50000);
+    StepsPerSecond_slider->bounds(1, 10'000'000);
     StepsPerSecond_slider->value(stepspersec_def);
 
-    FPS_slider->bounds(20, 360);
-    FPS_slider->value(FPS_default);
+    Temp_slider->bounds(0.1, 2);
+    Temp_slider->value(temp_def);
+
+    H_ext_slider->bounds(-5, 5);
+    H_ext_slider->value(h_ext_def);
 
     enable_gravity->value(enable_gravity_def);
     enable_file_output->value(enable_file_output_def);
@@ -510,10 +531,21 @@ int CreateMyWindow(int argc, char** argv) {
     graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width + x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width), 0.5 * main_window->h());
 
     main_window->end();
-    
     main_window->show();
     spinning_top_window->show();
     graph_window->show();
 
     return (Fl::run());
 }
+
+
+
+
+
+//TODO:
+//-add zoom also on spin, and use right click menu to reset to default zoom and position
+//-change initial config from right-click menu to choice menu
+//-add H field
+//plot magnetization
+//add T sweep
+//add multiple runs as function of T to calculate Cv e <M>(T) like in the Python code
