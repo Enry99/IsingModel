@@ -17,7 +17,7 @@ public:
     myFl_Float_Input(int X, int Y, int W, int H, double** values, int index, const char* l = 0) : Fl_Float_Input(X, Y, W, H, l), handled_vals(values), index(index) { }
 
     float handledvalue() { return *handled_vals[index]; }
-    void handledvalue(float val) { *handled_vals[index] = val; }
+    void handledvalue(double val) { *handled_vals[index] = val; }
 
     void set_text_value(double val)
     {
@@ -110,7 +110,7 @@ public:
         end();             
     }
 
-    void set_text_values(float xmin, float xmax, float ymin, float ymax)
+    void set_text_values(double xmin, double xmax, double ymin, double ymax)
     {
         xmin_box->set_text_value(xmin);
         xmax_box->set_text_value(xmax);
@@ -118,7 +118,7 @@ public:
         ymax_box->set_text_value(ymax);
     }
 
-    void setvalues(float xmin, float xmax, float ymin, float ymax)
+    void setvalues(double xmin, double xmax, double ymin, double ymax)
     {
         set_text_values(xmin, xmax, ymin, ymax);
         xmin_box->handledvalue(xmin);

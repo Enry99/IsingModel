@@ -1,4 +1,3 @@
-//#define DATA_OUTPUT
 #define SLEEP
 #ifndef SLEEP
 bool goDraw = true;
@@ -10,124 +9,98 @@ bool goDraw = true;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-#include <FL/x.H>
-#include <FL/Fl.H>
-#include <FL/Fl_Window.H>
-#include <FL/Fl_Gl_Window.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Value_Slider.H>
-#include <FL/Fl_Gl_Window.H>
-#include <FL/Fl_Multiline_Output.H>
 #include <FL/Fl_Check_Button.H>
 #include <vector>
 #include <array>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <sstream>
-#include <cmath>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <cmath>
 #include <thread>
 #include <time.h>
 #include <cstdarg>
-
 #include <random>
 
-//extern functions/variables (defined in window.cpp)
+//EXTERN functions/variables (defined in window.cpp)#############
 extern int CreateMyWindow(int argc, char** argv);
 extern void activateButtons();
-extern Fl_Check_Button* enable_gravity;
+//extern Fl_Check_Button* enable_gravity;
 extern Fl_Check_Button* enable_file_output;
-extern Fl_Check_Button* persistent_trail;
 extern double FPS_display_width, FPS_display_height;
 constexpr int FPS_default = 72;
+//###############################################################
+
+
 
 //variables declarations
 
-//ISING MODEL VARIABLES
-long long int Nspins; //NxN grid
-unsigned long long int step_i, Nsteps;
+//ISING MODEL VARIABLES##########################################
+long long int 
+Nspins, //NxN grid
+step_i, 
+Nsteps;
 double J = 1;
 double H_field_ext = 0;
 double mu = 1;
 constexpr double kb = 1;
 double Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
 double T_div_Tc;
-//////////////////////////////////////////////////
 
-
-///
-double steps_per_second;
-double accumulator = 0;
-int values[4]{}; //values tied to sliders
-bool run_animation = false; //run starts the animation when the first frame is ready
-bool pause_animation = false; //pause is controlled by button
-bool
-SHOW_FPS = true;
-int SPIN_INITIALIZATION = 0;
-std::chrono::steady_clock::time_point 
-idle_prev_time = std::chrono::steady_clock::now(),
-previous_time, 
-FPS_previous_time; //clock for fps count, is updated every second
-int frames_counter = 0, FPS = 0;
-std::vector<std::array<double, 4>> rotation_data;
-std::vector<double> Energy_data;
-std::ofstream Energy_stream;
-
-double color = 0;
+std::vector<int> spinArray;
+std::mt19937 generator, generator2;
+std::bernoulli_distribution bernoulli_dist;
+std::uniform_int_distribution<int>* uniformdist_site;
+std::uniform_real_distribution<double> uniformdist_accept(0, 1);
+std::vector<std::array<double, 2>> Magnetization_data;
+std::vector<std::array<double, 2>> H_field_ext_data;
+std::ofstream Magnetization_stream;
 enum initializations
 {
     RANDOM_INIT,
     UNIFORM_UP_INIT,
     UNIFORM_DOWN_INIT
 };
+int SPIN_INITIALIZATION = 0;
+//###############################################################
 
-//functions declarations
-void keyboardFunction(unsigned char, int, int);
-void drawFPS(std::string);
-void drawSteps(std::string);
-void drawSpinningTop();
+
+
+//ANIMATION VARIABLES############################################
+double steps_per_second;
+double accumulator = 0;
+int values[3]{}; //values tied to sliders
+bool run_animation = false; //run starts the animation when the first frame is ready
+bool pause_animation = false; //pause is controlled by button
+bool
+SHOW_FPS = true;
+
+std::chrono::steady_clock::time_point 
+idle_prev_time = std::chrono::steady_clock::now(),
+previous_time, 
+FPS_previous_time; //clock for fps count, is updated every second
+int frames_counter = 0, FPS = 0;
+//###############################################################
+
+
+
+//functions declarations#########################################
 void setInitialConditions();
-void evolve();
+void initialize_spins();
 void startAlgorithm();
 void animationLoop();
+void evolve();
+void drawSpinningTop();
+void drawFPS(std::string);
+void drawSteps(std::string);
+//void keyboardFunction(unsigned char, int, int);
+//#################################################################
+//END OF DECLARATIONS
 
 
-std::vector<int> spinArray;
-std::mt19937 generator, generator2;
-std::bernoulli_distribution bernoulli_dist;
-std::uniform_int_distribution<int>* uniformdist_site;
-std::uniform_real_distribution<double> uniformdist_accept(0,1);
 
-void initialize_spins()
-{
-    Nspins = values[0];
-    Nsteps = values[1];
-    spinArray.resize(Nspins * Nspins);
-    switch (SPIN_INITIALIZATION)
-    {
-    case RANDOM_INIT:
-    {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = bernoulli_dist(generator) ? 1 : -1;
-        break;
-    }
-    case UNIFORM_UP_INIT:
-    {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = 1;
-        break;
-    }
-    case UNIFORM_DOWN_INIT:
-    {
-        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = -1;
-        break;
-    }
-    default:
-        break;
-    }
 
-}
-
+//OPENGL loop stuff#########################
+/*
 void keyboardFunction(unsigned char key, int, int)
 {
 
@@ -141,7 +114,58 @@ void keyboardFunction(unsigned char key, int, int)
     }
 
 }
+*/
 
+void startAlgorithm()
+{
+    step_i = 0; accumulator = 0;
+    run_animation = true;
+    previous_time = std::chrono::steady_clock::now();
+}
+
+void animationLoop()
+{
+
+    static int previousSpins = -1;
+    static int previousInit = -1;
+#ifdef SLEEP
+
+    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000. / FPS_default) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
+    idle_prev_time = std::chrono::steady_clock::now();
+
+    steps_per_second = values[2];
+
+    if (run_animation) evolve();
+    else
+    {
+        if (previousSpins != values[0] || previousInit != SPIN_INITIALIZATION)
+        {
+            initialize_spins();
+            previousSpins = values[0];
+            previousInit = SPIN_INITIALIZATION;
+        }
+    }
+
+#else
+    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / FPS_default)
+    {
+        idle_prev_time = std::chrono::steady_clock::now();
+
+        if (!run_animation)
+        {
+
+        }
+        else evolve();
+        goDraw = true;
+    }
+#endif
+
+}
+//##########################################
+
+
+
+//drawing functions#########################
 void drawFPS(std::string text)
 {
 
@@ -156,11 +180,11 @@ void drawFPS(std::string text)
     glLoadIdentity();
 
     glBegin(GL_QUADS);
-        glColor3f(0, 0, 0);
-        glVertex2f(0, 0);
-        glVertex2f(0.07, 0);
-        glVertex2f(0.07, 0.04);
-        glVertex2f(0, 0.04);
+    glColor3f(0, 0, 0);
+    glVertex2f(0, 0);
+    glVertex2f(0.0001 * Fl::w(), 0);
+    glVertex2f(0.0001 * Fl::w(), 0.04);
+    glVertex2f(0, 0.04);
     glEnd();
 
     glColor3f(0, 1, 0);
@@ -217,11 +241,11 @@ void drawSpinningTop()
 
     constexpr int side = 1;
 
-    
+
     glBegin(GL_QUADS);
-    for (size_t  i = 0; i < Nspins; ++i)
+    for (size_t i = 0; i < Nspins; ++i)
         for (size_t j = 0; j < Nspins; ++j)
-        {       
+        {
             if (spinArray[Nspins * i + j] > 0)
             {
                 glColor3f(1, 1, 1);
@@ -230,52 +254,90 @@ void drawSpinningTop()
                 glVertex2f(i + side, j);
                 glVertex2f(i + side, j + side);
                 glVertex2f(i, j + side);
-            }   
+            }
         }
     glEnd();
-    
-    
+
+
     ++frames_counter;
-    if((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - FPS_previous_time)).count()*1.e-6 >=1) //updated every second
+    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - FPS_previous_time)).count() * 1.e-6 >= 1) //updated every second
     {
         FPS = frames_counter;
         frames_counter = 0;
     }
-    if(SHOW_FPS) drawFPS( std::string("FPS: ") + std::to_string( FPS ) );
-    drawSteps(std::string("Step: ") + std::to_string(step_i/1'000'000) + std::string("M"));
+    if (SHOW_FPS) drawFPS(std::string("FPS: ") + std::to_string(FPS));
+    drawSteps(std::string("Step: ") + std::to_string(step_i / 1'000'000) + std::string("M"));
 
     //glutSwapBuffers();
     glFlush();
 }
+//###########################################
 
+
+
+
+
+//ACTUAL ISING MCMC simulation###############
 void setInitialConditions()
-{    
+{
     initialize_spins();
     Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
     generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
     generator2.seed(std::chrono::system_clock::now().time_since_epoch().count());
     uniformdist_site = new std::uniform_int_distribution<int>(0, Nspins * Nspins - 1); //U( [a,b] <- (b included))
 
-    if(enable_file_output->value())
+    if (enable_file_output->value())
     {
         std::ofstream initial_values_stream("initial_values.txt");
-        const char* slider_names[4] = {
+        const char* slider_names[] = {
             "N of NxN grid = ",
-            "mass = ",
-            "tf = ",
-            "FPS max"
+            "Nsteps = ",
+            "StepsPerSecond = ",
+            "T/Tc max =",
+            "H_ext = "
         };
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 3; ++i)
         {
             initial_values_stream << slider_names[i] << values[i] << '\n';
         }
+        initial_values_stream << slider_names[3] << T_div_Tc << '\n';
+        initial_values_stream << slider_names[4] << H_field_ext << '\n';
         initial_values_stream.clear();
         initial_values_stream.close();
 
-        Energy_stream.open("Energy.txt");
+        Magnetization_stream.open("Magnetization.txt");
+        Magnetization_stream << "Step\t\tT/Tc\t\tH_ext\t\tMagnetization\n";
     }
 
     //rotation_data.reserve(Nsteps);
+}
+
+void initialize_spins()
+{
+    Nspins = values[0];
+    Nsteps = values[1];
+    spinArray.resize(Nspins * Nspins);
+    switch (SPIN_INITIALIZATION)
+    {
+    case RANDOM_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = bernoulli_dist(generator) ? 1 : -1;
+        break;
+    }
+    case UNIFORM_UP_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = 1;
+        break;
+    }
+    case UNIFORM_DOWN_INIT:
+    {
+        for (int i = 0; i < spinArray.size(); ++i) spinArray[i] = -1;
+        break;
+    }
+    default:
+        break;
+    }
+
 }
 
 void evolve()
@@ -297,46 +359,44 @@ void evolve()
         //in pratica ogni volta viene mandato fuori un fotogramma,
         //poi si guarda quanto tempo e' passato, si evolve fino al nuovo tempo e si manda fuori il nuovo fotogramma
 
-        
 
 
-        while (accumulator >= 1/steps_per_second && step_i < Nsteps)
+
+        while (accumulator >= 1 / steps_per_second && step_i < Nsteps)
         {
-            
+
             //Metropolis-Hastings MCMC
             size_t i = (*uniformdist_site)(generator); //select spin
 
             //PBC --> not at boundary ? normal neighbours : pbc neighbours
-            size_t up = (i + Nspins) < Nspins * Nspins ? i+Nspins : i+Nspins - Nspins*Nspins;
+            size_t up = (i + Nspins) < Nspins * Nspins ? i + Nspins : i + Nspins - Nspins * Nspins;
             size_t down = i > Nspins ? i - Nspins : i - Nspins + Nspins * Nspins;
             size_t sx = i % Nspins ? i - 1 : i - 1 + Nspins;
             size_t dx = (i + 1) % Nspins ? i + 1 : i + 1 - Nspins;
 
             double deltaE = 2 * spinArray[i] * (J * (spinArray[sx] + spinArray[dx] + spinArray[up] + spinArray[down]) + mu * H_field_ext);
-            
 
-            if(deltaE <= 0) spinArray[i] *= -1;
+
+            if (deltaE <= 0) spinArray[i] *= -1;
             else if (uniformdist_accept(generator2) < std::exp(-deltaE / (kb * T_div_Tc * Tc))) spinArray[i] *= -1;
-            
+
             /////////////////////////////////////////////////////////
-
-            /*
-            double E = sin( 0.1 *step_i);
-
-            //Energy_data.push_back(E);
-
-            if (enable_file_output->value())
-            {
-                Energy_stream << step_i << '\t' << E << '\n';
-            }
-            */
             accumulator -= 1 / steps_per_second;
             ++step_i;
         }
 
-        //color = step_i;
 
-        //rotation_data.push_back({ 0, 0, 0, 0 });
+        double M = 0;
+        for (auto i : spinArray) M += i;
+        M /= spinArray.size();
+        Magnetization_data.push_back(std::array<double, 2>({ double(step_i), M }));
+        H_field_ext_data.push_back(std::array<double, 2>({ double(step_i), H_field_ext }));
+
+        if (enable_file_output->value())
+        {
+            Magnetization_stream << step_i << '\t' << T_div_Tc << '\t' << H_field_ext << '\t' << M << '\n';
+        }
+
     }
     else
     {
@@ -347,8 +407,8 @@ void evolve()
         if (enable_file_output->value())
         {
 
-            Energy_stream.clear();
-            Energy_stream.close();
+            Magnetization_stream.clear();
+            Magnetization_stream.close();
         }
 
         run_animation = false;
@@ -356,52 +416,8 @@ void evolve()
     }
 
 }
+//###########################################
 
-void startAlgorithm()
-{
-    step_i = 0; accumulator = 0;
-    run_animation = true;
-    previous_time = std::chrono::steady_clock::now();
-}
-
-void animationLoop()
-{
-
-    static int previousSpins = -1;
-    static int previousInit = -1;
-#ifdef SLEEP
-    
-    std::this_thread::sleep_for(std::chrono::microseconds((int)(1'000'000. / FPS_default) - (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count()));
-    idle_prev_time = std::chrono::steady_clock::now();
-
-    steps_per_second = values[2];
-    
-    if (run_animation) evolve();
-    else
-    {
-        if (previousSpins != values[0] || previousInit != SPIN_INITIALIZATION)
-        {
-            initialize_spins();
-            previousSpins = values[0];
-            previousInit = SPIN_INITIALIZATION;
-        }
-    }
-
-#else
-    if ((std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - idle_prev_time)).count() * 1.e-6 >= 1. / FPS_default)
-    {
-        idle_prev_time = std::chrono::steady_clock::now();
-        
-        if (!run_animation)
-        {
-
-        }
-        else evolve();
-        goDraw = true;
-    }
-#endif
-         
-}
 
 int main (int argc, char **argv) {
 

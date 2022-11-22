@@ -1,22 +1,17 @@
 #include <FL/gl.h>
 #include <FL/glu.h>
-#include <FL/glut.H>
-#include <FL/x.H>
 #include <FL/Fl.H>
-#include <FL/Fl_Window.H>
-#include <FL/Fl_Toggle_Button.H>
-#include <FL/Fl_Value_Input.H>
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Choice.H>
 #include <vector>
 #include <array>
 #include "AxisRangeInput.h"
 
-
 extern Fl_Choice* menu;
 extern Fl_Check_Button* autorange_button;
 extern AxisRangeInput* axis_boxes;
-extern std::vector<double> Energy_data;
+extern std::vector<std::array<double,2>> Magnetization_data;
+extern std::vector<std::array<double, 2>> H_field_ext_data;
 extern unsigned long long int step_i;
 
 double xmin_graph = -1;
@@ -28,19 +23,21 @@ double data_xMax;
 double data_xMin;
 double data_yMax;
 double data_yMin;
-int last_index = 0;
+unsigned long long last_index = 0;
 int graphID = -1;
 
 const char* graph_menu_labels[]
 {
     "None",
-    "Energy (t)"
+    "Magnetization (t)",
+    "Hysteresis (M vs H)"
 };
 
 enum graphMenuItems
 {
     NONE,
-    ENERGY_T
+    MAGNETIZATION_T,
+    HYSTERESYS
 };
 
 
@@ -170,22 +167,23 @@ void time_single_plot(std::vector<T>& y_data)
         {
             data_xMax = 1;
             data_xMin = 0;
-            data_yMax = y_data[0];
-            data_yMin = y_data[0];
+            data_yMax = y_data[0][1];
+            data_yMin = y_data[0][1];
         }
         for (;last_index < y_data.size(); ++last_index)
         {
-            data_yMax = (std::max)(data_yMax, y_data[last_index]);
-            data_yMin = (std::min)(data_yMin, y_data[last_index]);
+            data_yMax = (std::max)(data_yMax, y_data[last_index][1]);
+            data_yMin = (std::min)(data_yMin, y_data[last_index][1]);
         }
 
-        xmax_graph = y_data.size() + 1;
+        xmax_graph = (y_data[last_index][0]+ 2);
         xmin_graph = 0 - 0.25;
         ymax_graph = data_yMax + abs(data_yMax) * 0.1;
         ymin_graph = data_yMin - abs(data_yMin) * 0.1;
 
         setAxisRange();
     }
+
 
     //draw axis
     glBegin(GL_LINES);
@@ -207,7 +205,7 @@ void time_single_plot(std::vector<T>& y_data)
 
         for (int i = 0; i < y_data.size(); ++i)
         {
-            glVertex2f(i, y_data[i]);
+            glVertex2f(y_data[i][0], y_data[i][1]);
         }
         glEnd();
 
@@ -283,10 +281,12 @@ void drawGraph() {
     switch (graphID)
     {
 
-    case ENERGY_T:
-        time_single_plot(Energy_data);
+    case MAGNETIZATION_T:
+        xvsy_plot(Magnetization_data, 0, Magnetization_data, 1);
         break;
-
+    case HYSTERESYS:
+        xvsy_plot(H_field_ext_data, 1, Magnetization_data, 1);
+        break;
     default:
         //draw axis
         glBegin(GL_LINES);
