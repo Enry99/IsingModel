@@ -89,7 +89,7 @@ void initialize_spins();
 void startAlgorithm();
 void animationLoop();
 void evolve();
-void drawSpinningTop();
+void drawSpinLattice();
 void drawFPS(std::string);
 void drawSteps(std::string);
 //void keyboardFunction(unsigned char, int, int);
@@ -224,7 +224,7 @@ void drawSteps(std::string text)
     glEnable(GL_DEPTH_TEST);
 }
 
-void drawSpinningTop()
+void drawSpinLattice()
 {
     if (!frames_counter) FPS_previous_time = std::chrono::steady_clock::now();
 
@@ -309,8 +309,8 @@ void setInitialConditions()
         Magnetization_stream << "Step\t\tT/Tc\t\tH_ext\t\tMagnetization\n";
     }
 
-    Magnetization_data.reserve(Nsteps);
-    H_field_ext_data.reserve(Nsteps);
+    Magnetization_data.reserve(Nsteps/values[2] * FPS_default);
+    H_field_ext_data.reserve(Nsteps/ values[2] * FPS_default);
 }
 
 void initialize_spins()

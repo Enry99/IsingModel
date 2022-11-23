@@ -34,7 +34,7 @@ extern bool goDraw;
 extern void setInitialConditions();
 extern void startAlgorithm();
 extern void animationLoop();
-extern void drawSpinningTop();
+extern void drawSpinLattice();
 extern void drawGraph();
 //extern void keyboardFunction(unsigned char, int, int);
 extern void setAxisRange();
@@ -60,7 +60,7 @@ extern double H_field_ext;
 
 
 //Function declarations
-void idleSpinningTop(void*);
+void idleSpinLattice(void*);
 void idleGraph(void*);
 void graphmouseFunction(int, int, int, int);
 void graphmouseWheelFunction(int);
@@ -110,7 +110,7 @@ constexpr bool enable_file_output_def = false;
 class MyGlutWindow;
 class MyGlutWindow2;
 Fl_Window * main_window;
-MyGlutWindow* spinning_top_window;
+MyGlutWindow* spin_lattice_window;
 MyGlutWindow2* graph_window;
 Fl_Button * start_button, * stop_button, * pause_button, * reset_button;
 SliderInput_Int
@@ -169,7 +169,7 @@ class MyGlutWindow : public Fl_Glut_Window {
         static bool first_time = true;
         if (first_time) { valid(1); init();  FixViewport(w(), h()); first_time = false; }
        
-        drawSpinningTop();
+        drawSpinLattice();
     }
 
     void resize(int X, int Y, int W, int H) 
@@ -187,7 +187,7 @@ public:
     MyGlutWindow(int X, int Y, int W, int H, const char* L = 0, bool use_mouse_keyboard = false) : Fl_Glut_Window(X, Y, W, H, L)
     {
         mode(FL_RGB);
-        Fl::add_idle(idleSpinningTop, this);
+        Fl::add_idle(idleSpinLattice, this);
         /*if (use_mouse_keyboard) {
             //this->mouse = mouseFunction;
             //this->motion = mouseMotionCallback;
@@ -198,14 +198,14 @@ public:
 
 };
 
-void idleSpinningTop(void*)
+void idleSpinLattice(void*)
 {
     animationLoop(); //if run_algorithm=true updates data (with evolve)
 #ifdef SLEEP  
-    spinning_top_window->redraw();  //draws using drawSpinningTop
+    spin_lattice_window->redraw();  //draws using drawSpinLattice
 #else
     if (goDraw) {
-        spinning_top_window->redraw();
+        spin_lattice_window->redraw();
         goDraw = false;
     }
 #endif
@@ -433,7 +433,7 @@ void main_window_cb(Fl_Widget* widget, void*)
 #if defined SLEEP && (defined(_WIN32) || defined(WIN32)) && defined CHANGE_SYSTEM_TIMER_RESOLUTION
     timeEndPeriod(1);
 #endif
-    delete spinning_top_window;
+    delete spin_lattice_window;
     delete graph_window;
     delete main_window;
     return exit(EXIT_SUCCESS);
@@ -545,12 +545,12 @@ int CreateMyWindow(int argc, char** argv) {
 
 
     //subwindows
-    spinning_top_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
+    spin_lattice_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
     graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width + x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width), 0.5 * main_window->h());
 
     main_window->end();
     main_window->show();
-    spinning_top_window->show();
+    spin_lattice_window->show();
     graph_window->show();
 
     return (Fl::run());
