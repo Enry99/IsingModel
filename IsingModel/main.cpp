@@ -309,8 +309,8 @@ void setInitialConditions()
         Magnetization_stream << "Step\t\tT/Tc\t\tH_ext\t\tMagnetization\n";
     }
 
-    Magnetization_data.reserve(Nsteps/values[2] * FPS_default);
-    H_field_ext_data.reserve(Nsteps/ values[2] * FPS_default);
+    //Magnetization_data.reserve(Nsteps/values[2] * FPS_default);
+    //H_field_ext_data.reserve(Nsteps/ values[2] * FPS_default);
 }
 
 void initialize_spins()

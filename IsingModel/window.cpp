@@ -464,7 +464,7 @@ int CreateMyWindow(int argc, char** argv) {
     //double x_buttons = 0.6 * w_ext;
     double y_buttons = 0.85 * h_ext;
 
-    main_window = new Fl_Window((Fl::w()- w_ext)/2, (Fl::h()-h_ext)/2, w_ext, h_ext, "Ising Model");
+    main_window = new Fl_Window((Fl::w()- w_ext)/2, (Fl::h()-h_ext)/2, w_ext, h_ext, "MCMC Ising Model");
     main_window->resizable(main_window);
     main_window->callback(main_window_cb);
     main_window->show(argc, argv);
@@ -545,7 +545,7 @@ int CreateMyWindow(int argc, char** argv) {
 
 
     //subwindows
-    spin_lattice_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Top_window", true);   //9./16. * 0.95 * w_ext
+    spin_lattice_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Lattice_window", true);   //9./16. * 0.95 * w_ext
     graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width + x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width), 0.5 * main_window->h());
 
     main_window->end();
