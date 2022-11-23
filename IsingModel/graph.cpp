@@ -23,7 +23,7 @@ double data_xMax;
 double data_xMin;
 double data_yMax;
 double data_yMin;
-unsigned long long last_index = 0;
+unsigned long long last_index = 0; //reset when changing plot or restart algo
 int graphID = -1;
 
 const char* graph_menu_labels[]
@@ -93,7 +93,8 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
 
     if (x_data.size() && y_data.size())
     {
-        glBegin(GL_POINTS);
+        glPointSize(2);
+        glBegin(GL_POINTS);      
         glColor3f(0, 1, 0);
 
         for (int i = 0; i < x_data.size(); ++i)
@@ -101,173 +102,7 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
             glVertex2f(x_data[i][x_index], y_data[i][y_index]);
         }
         glEnd();
-
-    }
-}
-
-template<class T>
-void time_single_plot(std::vector<T>& y_data, int y_index)
-{    
-    if (autorange_button->value() && y_data.size())
-    {
-        if (last_index == 0)
-        {
-            data_xMax = 1;
-            data_xMin = 0;
-            data_yMax = y_data[0][y_index];
-            data_yMin = y_data[0][y_index];
-        }
-        for (; last_index < y_data.size(); ++last_index)
-        {
-            data_yMax = (std::max)(data_yMax, y_data[last_index][y_index]);
-            data_yMin = (std::min)(data_yMin, y_data[last_index][y_index]);
-        }
-
-        xmax_graph = y_data.size() +1;
-        xmin_graph = 0 - 0.25;
-        ymax_graph = data_yMax + abs(data_yMax) * 0.1;
-        ymin_graph = data_yMin - abs(data_yMin) * 0.1;
-
-        setAxisRange();
-    }
-
-    //draw axis
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(xmin_graph, 0);
-    glVertex2f(xmax_graph, 0);
-    glEnd();
-
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(0, ymin_graph);
-    glVertex2f(0, ymax_graph);
-    glEnd();
-
-    if (y_data.size())
-    {
-        glBegin(GL_POINTS);
-        glColor3f(0, 1, 0);
-
-        for (int i = 0; i < y_data.size(); ++i)
-        {
-            glVertex2f(i, y_data[i][y_index]);
-        }
-        glEnd();
-
-    }
-}
-
-template<class T>
-void time_single_plot(std::vector<T>& y_data)
-{
-    if (autorange_button->value() && y_data.size())
-    {
-        if (last_index == 0)
-        {
-            data_xMax = 1;
-            data_xMin = 0;
-            data_yMax = y_data[0][1];
-            data_yMin = y_data[0][1];
-        }
-        for (;last_index < y_data.size(); ++last_index)
-        {
-            data_yMax = (std::max)(data_yMax, y_data[last_index][1]);
-            data_yMin = (std::min)(data_yMin, y_data[last_index][1]);
-        }
-
-        xmax_graph = (y_data[last_index][0]+ 2);
-        xmin_graph = 0 - 0.25;
-        ymax_graph = data_yMax + abs(data_yMax) * 0.1;
-        ymin_graph = data_yMin - abs(data_yMin) * 0.1;
-
-        setAxisRange();
-    }
-
-
-    //draw axis
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(xmin_graph, 0);
-    glVertex2f(xmax_graph, 0);
-    glEnd();
-
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(0, ymin_graph);
-    glVertex2f(0, ymax_graph);
-    glEnd();
-
-    if (y_data.size())
-    {
-        glBegin(GL_POINTS);
-        glColor3f(0, 1, 0);
-
-        for (int i = 0; i < y_data.size(); ++i)
-        {
-            glVertex2f(y_data[i][0], y_data[i][1]);
-        }
-        glEnd();
-
-    }
-}
-
-template<class T>
-void time_double_plot(std::vector<T>& y1_data, int y1_index, std::vector<T>& y2_data, int y2_index)
-{
-    if (autorange_button->value() && y1_data.size() && y2_data.size())
-    {
-        if (last_index == 0)
-        {
-            data_xMax = 1;
-            data_xMin = 0;
-            data_yMax = (std::max)(y1_data[0][y1_index], y2_data[0][y2_index]);
-            data_yMin = (std::min)(y1_data[0][y1_index], y2_data[0][y2_index]);
-        }
-        for (; last_index < y1_data.size(); ++last_index)
-        {
-            data_yMax = (std::max)(data_yMax, (std::max)(y1_data[last_index][y1_index], y2_data[last_index][y2_index]));
-            data_yMin = (std::min)(data_yMin, (std::min)(y1_data[last_index][y1_index], y2_data[last_index][y2_index]));
-        }
-
-        xmax_graph = y1_data.size() + 1;
-        xmin_graph = 0 - 0.25;
-        ymax_graph = data_yMax + abs(data_yMax) * 0.1;
-        ymin_graph = data_yMin - abs(data_yMin) * 0.1;
-
-        setAxisRange();
-    }
-
-    //draw axis
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(xmin_graph, 0);
-    glVertex2f(xmax_graph, 0);
-    glEnd();
-
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex2f(0, ymin_graph);
-    glVertex2f(0, ymax_graph);
-    glEnd();
-
-    if (y1_data.size() && y2_data.size())
-    {
-        glBegin(GL_POINTS);
-        glColor3f(0, 1, 0);
-        for (int i = 0; i < y1_data.size(); ++i)
-        {
-            glVertex2f(i, y1_data[i][y1_index]);
-        }
-        glEnd();
-
-        glBegin(GL_POINTS);
-        glColor3f(1, 0.55, 0);
-        for (int i = 0; i < y1_data.size(); ++i)
-        {
-            glVertex2f(i, y2_data[i][y2_index]);
-        }
-        glEnd();
+        glPointSize(1);
 
     }
 }

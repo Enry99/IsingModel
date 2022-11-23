@@ -309,7 +309,8 @@ void setInitialConditions()
         Magnetization_stream << "Step\t\tT/Tc\t\tH_ext\t\tMagnetization\n";
     }
 
-    //rotation_data.reserve(Nsteps);
+    Magnetization_data.reserve(Nsteps);
+    H_field_ext_data.reserve(Nsteps);
 }
 
 void initialize_spins()
@@ -370,7 +371,7 @@ void evolve()
 
             //PBC --> not at boundary ? normal neighbours : pbc neighbours
             size_t up = (i + Nspins) < Nspins * Nspins ? i + Nspins : i + Nspins - Nspins * Nspins;
-            size_t down = i > Nspins ? i - Nspins : i - Nspins + Nspins * Nspins;
+            size_t down = i >= Nspins ? i - Nspins : i - Nspins + Nspins * Nspins;
             size_t sx = i % Nspins ? i - 1 : i - 1 + Nspins;
             size_t dx = (i + 1) % Nspins ? i + 1 : i + 1 - Nspins;
 
