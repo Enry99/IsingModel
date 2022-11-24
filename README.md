@@ -46,5 +46,6 @@ To summarize, the model depends on two external variables, $R_T := T/T_c$ and $\
 $A = \min \left(exp\left(\frac{-\Delta H_i}{R_T \bar{T}_c}\right) ,1\right)$
 
 In the program you can choose the initial distribution of the spins (random, all up, all down) and the value of J:
-(J=1 -> ferromagnetic, J=-1 -> antiferomagnetic) 
+
+(J=1 -> ferromagnetic, J=-1 -> antiferromagnetic) 
 
