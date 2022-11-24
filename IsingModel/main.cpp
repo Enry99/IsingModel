@@ -241,13 +241,14 @@ void drawSpinLattice()
 
 
     glBegin(GL_QUADS);
+    glColor3f(1, 0.5, 0);
+
     for (size_t i = 0; i < Nspins; ++i)
         for (size_t j = 0; j < Nspins; ++j)
         {
             if (spinArray[Nspins * i + j] > 0)
             {
-                glColor3f(1, 1, 1);
-
+                
                 glVertex2f(i, j);
                 glVertex2f(i + side, j);
                 glVertex2f(i + side, j + side);
