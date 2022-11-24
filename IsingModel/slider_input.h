@@ -83,7 +83,7 @@ class SliderInput : public Fl_Group {
 public:
     // CTOR
     SliderInput(double x, double y, double w, double h, const char *l=0, double* handled_val = nullptr) : Fl_Group(x,y,w,h,l), handled_value(handled_val) {
-        int in_w = 90;
+        int in_w = 100;
         input  = new Fl_Float_Input(x, y, in_w, h);
         input->callback(Input_CB, (void*)this);
         input->when(FL_WHEN_ENTER_KEY|FL_WHEN_NOT_CHANGED);

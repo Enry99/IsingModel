@@ -7,6 +7,10 @@
 #include <array>
 #include "AxisRangeInput.h"
 
+
+//variables/functions declarations###########################################
+
+//extern variables
 extern Fl_Choice* menu;
 extern Fl_Check_Button* autorange_button;
 extern AxisRangeInput* axis_boxes;
@@ -14,6 +18,8 @@ extern std::vector<std::array<double,2>> Magnetization_data;
 extern std::vector<std::array<double, 2>> H_field_ext_data;
 extern unsigned long long int step_i;
 
+
+//local variables
 double xmin_graph = -1;
 double xmax_graph = 1;
 double ymin_graph = -1;
@@ -39,6 +45,17 @@ enum graphMenuItems
     MAGNETIZATION_T,
     HYSTERESYS
 };
+
+
+//functions declarations
+void setAxisRange();
+template<class T>
+void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index);
+void drawGraph();
+
+//end of declarations#####################################################################
+
+
 
 
 void setAxisRange()
@@ -106,7 +123,6 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
 
     }
 }
-
 
 void drawGraph() {
     glMatrixMode(GL_MODELVIEW);

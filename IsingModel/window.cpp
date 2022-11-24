@@ -43,7 +43,7 @@ extern std::vector<int> spinArray;
 extern std::vector<std::array<double, 2>> Magnetization_data;
 extern std::vector<std::array<double, 2>> H_field_ext_data;
 extern std::ofstream Magnetization_stream;
-extern int values[3];
+extern long long int values[3];
 extern bool run_animation;
 extern bool pause_animation;
 extern double xmin_graph;
@@ -57,6 +57,7 @@ extern const char* graph_menu_labels[3];
 extern bool autorange;
 extern double T_div_Tc;
 extern double H_field_ext;
+extern double J;
 
 
 //Function declarations
@@ -90,15 +91,23 @@ double FPS_display_width, FPS_display_height;
 //right-click menu labels
 const char* initialconfig_menu_labels[]
 {
-     "Init: RandomDist",
+     "Init: Random Distribution",
      "Init: All Up",
      "Init: All Down"
 };
 
+const char* J_choice_menu_labels[]
+{
+     "J = 1 (ferromagnetic)",
+     "J = -1 (antiferromagnetic)"
+};
+
+
+
 //sliders default values
 constexpr int
 Nspins_def = 300,
-MaxSteps_def = 100'000'000,
+MaxSteps_def = 1'000'000'000,
 stepspersec_def = 1'000'000;
 constexpr double 
 temp_def = 1.1,
@@ -126,6 +135,7 @@ Fl_Check_Button* autorange_button;
 Fl_Check_Button* x_zoom_only;
 Fl_Choice* graphMenu;
 Fl_Choice* initialSetupMenu;
+Fl_Choice* J_choiceMenu;
 AxisRangeInput* axis_boxes;
 //#########################################################################
 //end of declarations_____________________________
@@ -365,6 +375,7 @@ void activateButtons()
     reset_button->activate();
     enable_file_output->activate();
     initialSetupMenu->activate();
+    J_choiceMenu->activate();
 }
 
 void deactivateButtons()
@@ -375,6 +386,7 @@ void deactivateButtons()
     reset_button->deactivate();
     enable_file_output->deactivate();
     initialSetupMenu->deactivate();
+    J_choiceMenu->deactivate();
 }
 
 void start_callback(Fl_Widget* f) {
@@ -417,7 +429,8 @@ void reset_callback(Fl_Widget* f)
     Temp_slider->value(temp_def),
     H_ext_slider->value(h_ext_def),
     //enable_gravity->value(enable_gravity_def);
-    initialSetupMenu->value(0);
+    initialSetupMenu->value(SPIN_INITIALIZATION = 0);
+    J_choiceMenu->value(0); J = 1;
 }
 //#####################################################################
 
@@ -426,6 +439,11 @@ void reset_callback(Fl_Widget* f)
 void initialConfigChoiceMenuCallback(Fl_Widget* f)
 {
     SPIN_INITIALIZATION = ((Fl_Choice*)f)->value();
+}
+
+void J_choiceMenuCallback(Fl_Widget* f)
+{
+    J = ((Fl_Choice*)f)->value() == 0 ? 1 : -1;
 }
 
 void main_window_cb(Fl_Widget* widget, void*)
@@ -457,7 +475,7 @@ int CreateMyWindow(int argc, char** argv) {
     double x0 = w_ext * 0.80; //x position of sliders (pixel count from main window's left edge)
     double y0 = h_ext * 0.04;
     double delta_h = h_ext * 0.055; //height step between sliders' upper-left corner 
-    double slider_width = w_ext * 0.16; 
+    double slider_width = w_ext * 0.18; 
     double slider_height = h_ext * 0.027; // 0.042;
     double button_width = w_ext * 0.15;
     double button_height = h_ext * 0.1;
@@ -485,7 +503,7 @@ int CreateMyWindow(int argc, char** argv) {
     Nspins_slider->bounds(4, 1000);
     Nspins_slider->value(Nspins_def);
 
-    MaxSteps_slider->bounds(100, 1'000'000'000);
+    MaxSteps_slider->bounds(100, 10'000'000'000);
     MaxSteps_slider->value(MaxSteps_def);
 
     StepsPerSecond_slider->bounds(1, 10'000'000);
@@ -502,16 +520,16 @@ int CreateMyWindow(int argc, char** argv) {
     //buttons
     start_button = new Fl_Button(x0, y_buttons, button_width, button_height, "@#>\tStart");
     start_button->color(FL_GREEN);
-    pause_button = new Fl_Toggle_Button(x0 - 0.94 * slider_width, y_buttons, button_width, button_height, "@#||\tPause/Unpause");
+    pause_button = new Fl_Toggle_Button(x0 - 0.94 * 0.16*w_ext, y_buttons, button_width, button_height, "@#||\tPause/Unpause");
     pause_button->color(FL_YELLOW);
-    stop_button = new Fl_Button(x0 - 1.88 * slider_width, y_buttons, button_width, button_height, "@#square\tStop");
+    stop_button = new Fl_Button(x0 - 1.88 * 0.16 * w_ext, y_buttons, button_width, button_height, "@#square\tStop");
     stop_button->color(FL_RED);
-    reset_button = new Fl_Button(x0 - 1.88 * slider_width, y_buttons - 0.75* button_height, button_width, 0.6*button_height, "Reset sliders");
+    reset_button = new Fl_Button(x0 - 1.88 * 0.16 * w_ext, y_buttons - 0.75* button_height, button_width, 0.6*button_height, "Reset sliders");
     reset_button->color(FL_CYAN);
-    //enable_gravity = new Fl_Check_Button(x0 - 0.7*slider_width, 0.78 * h_ext, 0.4*slider_width, slider_height, "Enable gravity");
-    enable_file_output = new Fl_Check_Button(x0 - 0.75*slider_width, 0.80 * h_ext, 0.5*slider_width, slider_height, "Output data on file");
-    autorange_button = new Fl_Check_Button(x0 - 0.7 * slider_width, 0.028 * h_ext + 0.5 * main_window->h(), 0.5 * slider_width, slider_height, "Auto range");
-    x_zoom_only = new Fl_Check_Button(x0 - 0.7 * slider_width, 0.028 * h_ext + 0.5 * main_window->h()+slider_height, 0.5 * slider_width, slider_height, "X axis only zoom");
+    //enable_gravity = new Fl_Check_Button(x0 - 0.7*0.16*w_ext, 0.78 * h_ext, 0.4*0.16*w_ext, slider_height, "Enable gravity");
+    enable_file_output = new Fl_Check_Button(x0 - 0.75* 0.16 * w_ext, 0.80 * h_ext, 0.5* 0.16 * w_ext, slider_height, "Output data on file");
+    autorange_button = new Fl_Check_Button(x0 - 0.5 * 0.16 * w_ext, 0.028 * h_ext + 0.5 * main_window->h(), 0.5 * 0.16 * w_ext, slider_height, "Auto range");
+    x_zoom_only = new Fl_Check_Button(x0 - 0.5 * 0.16 * w_ext, 0.028 * h_ext + 0.5 * main_window->h()+slider_height, 0.5 * 0.16 * w_ext, slider_height, "X axis only zoom");
     x_zoom_only->deactivate();
 
     start_button->callback(start_callback);
@@ -527,26 +545,32 @@ int CreateMyWindow(int argc, char** argv) {
 
 
     //menus
-    graphMenu = new Fl_Choice(x0 - 1.88 * slider_width, 0.028 * h_ext + 0.5 * main_window->h(), 0.9*slider_width, slider_height);
-    initialSetupMenu = new Fl_Choice(x0, y0 += delta_h, slider_width, 1.2 * slider_height);
+    graphMenu = new Fl_Choice(x0 - 1.88 * 0.16 * w_ext, 0.028 * h_ext + 0.5 * main_window->h(), 0.9*slider_width, slider_height);
     for (auto i : graph_menu_labels) graphMenu->add(i);
     graphMenu->callback(graphChoiceMenuCallback);
 
+    initialSetupMenu = new Fl_Choice(x0, y0 += delta_h, slider_width, 1.2 * slider_height);
     for (auto i : initialconfig_menu_labels) initialSetupMenu->add(i);
     initialSetupMenu->callback(initialConfigChoiceMenuCallback);
     initialSetupMenu->value(0);
 
 
+    J_choiceMenu = new Fl_Choice(x0, y0 += delta_h, slider_width, 1.2 * slider_height);
+    for (auto i : J_choice_menu_labels) J_choiceMenu->add(i);
+    J_choiceMenu->callback(J_choiceMenuCallback);
+    J_choiceMenu->value(0);
+
+
 
     //boxes
-    axis_boxes = new AxisRangeInput(x0 - 1.88 * slider_width, 0.045 * h_ext + 0.5 * main_window->h() + slider_height, 1.1*slider_width, slider_height,
+    axis_boxes = new AxisRangeInput(x0 - 1.88 * 0.16 * w_ext, 0.045 * h_ext + 0.5 * main_window->h() + slider_height, 1.1* 0.17 * w_ext, slider_height,
         &xmin_graph, &xmax_graph, &ymin_graph, &ymax_graph, "xmin, xmax, ymin, ymax");
     axis_boxes->deactivate();
 
 
     //subwindows
     spin_lattice_window = new MyGlutWindow(0.020 * w_ext, 0.025 * h_ext, 0.45 * w_ext, 0.95 * h_ext, "Lattice_window", true);   //9./16. * 0.95 * w_ext
-    graph_window = new MyGlutWindow2(x0 - 1.88 * slider_width, 0.025 * h_ext, 0.9 * slider_width + x0 - 0.94 * slider_width - (x0 - 1.88 * slider_width), 0.5 * main_window->h());
+    graph_window = new MyGlutWindow2(x0 - 1.88 * 0.16 * w_ext, 0.025 * h_ext, 0.9 * 0.16 * w_ext + x0 - 0.94 * 0.16 * w_ext - (x0 - 1.88 * 0.16 * w_ext), 0.5 * main_window->h());
 
     main_window->end();
     main_window->show();

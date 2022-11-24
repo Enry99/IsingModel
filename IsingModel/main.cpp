@@ -40,10 +40,8 @@ Nspins, //NxN grid
 step_i, 
 Nsteps;
 double J = 1;
-double H_field_ext = 0;
-double mu = 1;
-constexpr double kb = 1;
-double Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
+double H_field_ext = 0; //= H_ext(true)/(J*mu)
+const double Tc = 2 * 1 / (std::log(1 + std::sqrt(2))); //abs(J) = 1
 double T_div_Tc;
 
 std::vector<int> spinArray;
@@ -68,7 +66,7 @@ int SPIN_INITIALIZATION = 0;
 //ANIMATION VARIABLES############################################
 double steps_per_second;
 double accumulator = 0;
-int values[3]{}; //values tied to sliders
+long long int values[3]{}; //values tied to sliders
 bool run_animation = false; //run starts the animation when the first frame is ready
 bool pause_animation = false; //pause is controlled by button
 bool
@@ -182,8 +180,8 @@ void drawFPS(std::string text)
     glBegin(GL_QUADS);
     glColor3f(0, 0, 0);
     glVertex2f(0, 0);
-    glVertex2f(0.0001 * Fl::w(), 0);
-    glVertex2f(0.0001 * Fl::w(), 0.04);
+    glVertex2f(0.1 * 1920 / Fl::w(), 0);
+    glVertex2f(0.1 * 1920 / Fl::w(), 0.04);
     glVertex2f(0, 0.04);
     glEnd();
 
@@ -281,7 +279,7 @@ void drawSpinLattice()
 void setInitialConditions()
 {
     initialize_spins();
-    Tc = 2 * J / (kb * std::log(1 + std::sqrt(2)));
+
     generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
     generator2.seed(std::chrono::system_clock::now().time_since_epoch().count());
     uniformdist_site = new std::uniform_int_distribution<int>(0, Nspins * Nspins - 1); //U( [a,b] <- (b included))
@@ -375,11 +373,11 @@ void evolve()
             size_t sx = i % Nspins ? i - 1 : i - 1 + Nspins;
             size_t dx = (i + 1) % Nspins ? i + 1 : i + 1 - Nspins;
 
-            double deltaE = 2 * spinArray[i] * (J * (spinArray[sx] + spinArray[dx] + spinArray[up] + spinArray[down]) + mu * H_field_ext);
+            double deltaE = 2 * spinArray[i] * (J * (spinArray[sx] + spinArray[dx] + spinArray[up] + spinArray[down]) + H_field_ext);
 
 
             if (deltaE <= 0) spinArray[i] *= -1;
-            else if (uniformdist_accept(generator2) < std::exp(-deltaE / (kb * T_div_Tc * Tc))) spinArray[i] *= -1;
+            else if (uniformdist_accept(generator2) < std::exp(-deltaE / (T_div_Tc * Tc))) spinArray[i] *= -1;
 
             /////////////////////////////////////////////////////////
             accumulator -= 1 / steps_per_second;

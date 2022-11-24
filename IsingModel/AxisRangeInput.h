@@ -94,10 +94,10 @@ public:
         valueaddresses[2] = ymin;
         valueaddresses[3] = ymax;
 
-        xmin_box = new myFl_Float_Input(x, y, w / 4., h, valueaddresses, 0);
-        xmax_box = new myFl_Float_Input(x+w/4., y, w / 4., h, valueaddresses, 1);
-        ymin_box = new myFl_Float_Input(x+2*w/4, y, w / 4., h, valueaddresses, 2);
-        ymax_box = new myFl_Float_Input(x+3*w/4, y, w / 4., h, valueaddresses, 3);
+        xmin_box = new myFl_Float_Input(x, y, w / 3.5, h, valueaddresses, 0);
+        xmax_box = new myFl_Float_Input(x+w/3.5, y, w / 3.5, h, valueaddresses, 1);
+        ymin_box = new myFl_Float_Input(x+2*w/3.5, y, w / 3.5, h, valueaddresses, 2);
+        ymax_box = new myFl_Float_Input(x+3*w/3.5, y, w / 3.5, h, valueaddresses, 3);
 
         xmin_box->callback(Input_CB, (void*)this);
         xmin_box->when(FL_WHEN_ENTER_KEY);

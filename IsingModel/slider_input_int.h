@@ -9,7 +9,7 @@
 class SliderInput_Int : public Fl_Group {
     Fl_Int_Input* input;
     Fl_Slider* slider;
-    int* handled_value;
+    long long int* handled_value;
 
     // CALLBACK HANDLERS
     //    These 'attach' the input and slider's values together.
@@ -23,9 +23,9 @@ class SliderInput_Int : public Fl_Group {
             recurse = 1;
             char s[80];
 #if defined(WIN32)
-            sprintf_s(s, "%li", int(slider->value()));
+            sprintf_s(s, "%lli", long long(slider->value()));
 #else
-            sprintf(s, "%li", slider->value());
+            sprintf(s, "%lli", long long(slider->value()));
 #endif
             // fprintf(stderr, "SPRINTF(%d) -> '%s'\n", (int)(slider->value()+.5), s);
             input->value(s);          // pass slider's value to input
@@ -44,24 +44,24 @@ class SliderInput_Int : public Fl_Group {
         if (recurse) return;
         else {
             recurse = 1;
-            int val = 0;
+            long long val = 0;
 #if defined(WIN32)
-            if (sscanf_s(input->value(), "%li", &val) != 1) val = 0;
+            if (sscanf_s(input->value(), "%lli", &val) != 1) val = 0;
 #else
-            if (sscanf(input->value(), "%li", &val) != 1) val = 0;
+            if (sscanf(input->value(), "%lli", &val) != 1) val = 0;
 #endif
             // fprintf(stderr, "SCANF('%s') -> %d\n", input->value(), val);
-            int min = slider->minimum(); //if value is outside range, set it to the nearest bound of the slider's range
-            int max = slider->maximum();
+            long long int min = slider->minimum(); //if value is outside range, set it to the nearest bound of the slider's range
+            long long int max = slider->maximum();
             if (val < min) val = min;
             else if (val > max) val = max;
             slider->value(val);         // pass input's value to slider
 
             char s[80];
 #if defined(_WIN32) || defined(WIN32)
-            sprintf_s(s, "%li", val);
+            sprintf_s(s, "%lli", val);
 #else
-            sprintf(s, "%li", val);
+            sprintf(s, "%lli", val);
 #endif
 
             input->value(s);
@@ -77,8 +77,8 @@ class SliderInput_Int : public Fl_Group {
 
 public:
     // CTOR
-    SliderInput_Int(double x, double y, double w, double h, const char* l = 0, int* handled_val = nullptr) : Fl_Group(x, y, w, h, l), handled_value(handled_val) {
-        int in_w = 90;
+    SliderInput_Int(double x, double y, double w, double h, const char* l = 0, long long int* handled_val = nullptr) : Fl_Group(x, y, w, h, l), handled_value(handled_val) {
+        int in_w = 100;
         input = new Fl_Int_Input(x, y, in_w, h);
         input->callback(Input_CB, (void*)this);
         input->when(FL_WHEN_ENTER_KEY | FL_WHEN_NOT_CHANGED);
@@ -95,13 +95,13 @@ public:
     }
 
     // MINIMAL ACCESSORS
-    int  value() const { return slider->value(); }
-    void value(int val) { slider->value(val); Slider_CB2(); }
-    void minumum(int val) { slider->minimum(val); }
-    int  minumum() const { return slider->minimum(); }
-    void maximum(int val) { slider->maximum(val); }
-    int maximum() const { return slider->maximum(); }
-    void bounds(int low, int high) { slider->bounds(low, high); }
+    long long int  value() const { return slider->value(); }
+    void value(long long int val) { slider->value(val); Slider_CB2(); }
+    void minumum(long long int val) { slider->minimum(val); }
+    long long int  minumum() const { return slider->minimum(); }
+    void maximum(long long int val) { slider->maximum(val); }
+    long long int maximum() const { return slider->maximum(); }
+    void bounds(long long int low, long long int high) { slider->bounds(low, high); }
     void step(int dN) { slider->step(dN); }
 
 
