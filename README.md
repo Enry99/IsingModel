@@ -1,9 +1,9 @@
 # Ising Model
 Interactive real-time simulation of the 2D Ising model with OpenGl.
 
-Let's consider a 2D NxN spin lattice, where each spin can assume the values $\sigma_i=\pm 1$. The total system Hamiltonian, by further assuming
-  -uniform interaction term $J_{ij}=J$ for nearest neighbours (n.n.), 0 otherwise.
-  -uniform external magnetic field $h_i=h$
+Let's consider a 2D NxN spin lattice, where each spin can assume the values $\sigma_i=\pm 1$. The total system Hamiltonian, by further assuming\
+  -uniform interaction term $J_{ij}=J$ for nearest neighbours (n.n.), 0 otherwise.\
+  -uniform external magnetic field $h_i=h$\
 is then:
 
 $H = -J\sum_{i,j=n.n} \sigma_i\sigma_j - \mu h \sum_{i} \sigma_i$
@@ -14,16 +14,17 @@ For the 2D case we have 4 nearest neighbours, let's call them up (U), down (D), 
 
 $H_i = - \sigma_i \left(J  (\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i) )  + \mu h \right)$
 
-For simplicity we can re-parameterize the external magnetic field $\bar h := \mu h / J$, in this way the equation simplifies as:
+For simplicity we set |J| = 1 and re-parameterize the external magnetic field $\bar h := \mu h / J$, in this way the equation simplifies as:
 
-$H_i = -J \sigma_i \left(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i)  + \bar h \right)$
+$H_i = - \sigma_i \left(J(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i))  + \bar h \right)$
 
 
 So a single spin flip at the site $i$, that is $\sigma_{i, new} = - \sigma_{i, old}$ produces a change in the energy of the system 
-$\Delta H_i = H_{i, new} - H_{i, old} = -J (\sigma_{i, new} - \sigma_{i, old}) \left(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i)  + \bar h \right)$
+$\Delta H_i = H_{i, new} - H_{i, old} = - (\sigma_{i, new} - \sigma_{i, old}) \left(J(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i))  + \bar h \right)$
 
-Since $(\sigma_{i, new} - \sigma_{i, old}) = -2\sigma_{i, old} $, we have (dropping the index old, meaning that we are calculating the variation of the energy that we induce by flipping the spin at site $i$ from its current value $\sigma_i$:
-$\Delta H_i = +2J \sigma_i \left(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i)  + \bar h \right)$
+Since $(\sigma_{i, new} - \sigma_{i, old}) = -2\sigma_{i, old} $, we have (dropping the index old, meaning that we are calculating the variation of the energy that we induce by flipping the spin at site $i$ from its current value $\sigma_i$):
+
+$\Delta H_i = +2 \sigma_i \left(J(\sigma_U(i) + \sigma_D(i) + \sigma_L(i) + \sigma_R(i))  + \bar h \right)$
 
 In the Metropolis-Hastings algorithm we are accepting the spin flip with acceptance rate
 
@@ -45,7 +46,6 @@ To summarize, the model depends on two external variables, $R_T := T/T_c$ and $\
 
 $A = \min \left(exp\left(\frac{-\Delta H_i}{R_T \bar{T}_c}\right) ,1\right)$
 
-In the program you can choose the initial distribution of the spins (random, all up, all down) and the value of J:
-
+In the program you can choose the initial distribution of the spins (random, all up, all down) and the value of J:\
 (J=1 -> ferromagnetic, J=-1 -> antiferromagnetic) 
 
