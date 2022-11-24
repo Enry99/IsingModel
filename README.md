@@ -1,4 +1,4 @@
-# IsingModel
+# Ising Model
 Interactive real-time simulation of the 2D Ising model with OpenGl.
 
 Let's consider a 2D NxN spin lattice, where each spin can assume the values $\sigma_i=\pm 1$. The total system Hamiltonian, by further assuming
