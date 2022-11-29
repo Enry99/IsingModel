@@ -238,7 +238,7 @@ class MyGlutWindow2 : public Fl_Glut_Window {
     void init()
     {
         glClearColor(0.0, 0.0, 0.0, 0.0);
-        //glEnable(GL_DEPTH_TEST);
+        glEnable(GL_COLOR_BUFFER_BIT);
     }
 
     void FixViewport(int W, int H) {

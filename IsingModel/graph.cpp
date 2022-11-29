@@ -50,7 +50,7 @@ enum graphMenuItems
 //functions declarations
 void setAxisRange();
 template<class T>
-void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index);
+void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index, bool RAINBOW);
 void drawGraph();
 
 //end of declarations#####################################################################
@@ -68,7 +68,7 @@ void setAxisRange()
 }
 
 template<class T>
-void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index)
+void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index, bool RAINBOW)
 {
     if (autorange_button->value() && y_data.size() && x_data.size())
     {
@@ -110,12 +110,21 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
 
     if (x_data.size() && y_data.size())
     {
-        glPointSize(2);
+        glPointSize(3);
         glBegin(GL_POINTS);      
         glColor3f(0, 1, 0);
-
+        
+        int R = 255, G = 0, B = 0;
         for (int i = 0; i < x_data.size(); ++i)
         {
+            if (RAINBOW)
+            {
+                if (R > 0 && B == 0) ++G, --R;
+                if (G > 0 && R == 0) ++B, --G;
+                if (B > 0 && G == 0) ++R, --B;
+                glColor3f(R / 255., G / 255., B / 255.);
+            }
+
             glVertex2f(x_data[i][x_index], y_data[i][y_index]);
         }
         glEnd();
@@ -133,10 +142,10 @@ void drawGraph() {
     {
 
     case MAGNETIZATION_T:
-        xvsy_plot(Magnetization_data, 0, Magnetization_data, 1);
+        xvsy_plot(Magnetization_data, 0, Magnetization_data, 1, false);
         break;
     case HYSTERESYS:
-        xvsy_plot(H_field_ext_data, 1, Magnetization_data, 1);
+        xvsy_plot(H_field_ext_data, 1, Magnetization_data, 1, true);
         break;
     default:
         //draw axis
