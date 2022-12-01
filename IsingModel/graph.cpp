@@ -50,7 +50,7 @@ enum graphMenuItems
 //functions declarations
 void setAxisRange();
 template<class T>
-void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index, bool RAINBOW);
+void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int y_index, bool RAINBOW = false);
 void drawGraph();
 
 //end of declarations#####################################################################
@@ -136,18 +136,23 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
 void drawGraph() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     switch (graphID)
     {
 
     case MAGNETIZATION_T:
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         xvsy_plot(Magnetization_data, 0, Magnetization_data, 1, false);
         break;
     case HYSTERESYS:
+        glClearColor(0.9, 0.9, 0.9, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         xvsy_plot(H_field_ext_data, 1, Magnetization_data, 1, true);
         break;
     default:
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         //draw axis
         glBegin(GL_LINES);
         glColor3f(1, 0, 0);
