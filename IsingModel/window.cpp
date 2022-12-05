@@ -14,7 +14,7 @@ extern bool goDraw;
 #include <FL/gl.h>
 #include <FL/glu.h>
 #include <FL/glut.H>
-#include <FL/x.H>
+//#include <FL/x.H>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Gl_Window.H>
