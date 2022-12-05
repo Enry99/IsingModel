@@ -23,9 +23,9 @@ class SliderInput_Int : public Fl_Group {
             recurse = 1;
             char s[80];
 #if defined(WIN32)
-            sprintf_s(s, "%lli", long long(slider->value()));
+            sprintf_s(s, "%lli", (long long)(slider->value()));
 #else
-            sprintf(s, "%lli", long long(slider->value()));
+            sprintf(s, "%lli", (long long)(slider->value()));
 #endif
             // fprintf(stderr, "SPRINTF(%d) -> '%s'\n", (int)(slider->value()+.5), s);
             input->value(s);          // pass slider's value to input
