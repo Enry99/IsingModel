@@ -1,5 +1,5 @@
 # Ising Model
-Interactive real-time simulation of the 2D Ising model with OpenGl.
+Interactive real-time simulation of the 2D Ising model with OpenGl, using the FLTK library (https://www.fltk.org) for the graphical interface.
 
 Let's consider a 2D NxN spin lattice, where each spin can assume the values $\sigma_i=\pm 1$. The total system Hamiltonian, by further assuming\
   -uniform interaction term $J_{ij}=J$ for nearest neighbours (n.n.), 0 otherwise.\
