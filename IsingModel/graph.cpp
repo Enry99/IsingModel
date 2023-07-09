@@ -111,6 +111,7 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
     if (x_data.size() && y_data.size())
     {
         glPointSize(3);
+        glEnable(GL_POINT_SMOOTH);
         glBegin(GL_POINTS);      
         glColor3f(0, 1, 0);
         
@@ -128,6 +129,7 @@ void xvsy_plot(std::vector<T>& x_data, int x_index, std::vector<T>& y_data, int 
             glVertex2f(x_data[i][x_index], y_data[i][y_index]);
         }
         glEnd();
+        glDisable(GL_POINT_SMOOTH);
         glPointSize(1);
 
     }
